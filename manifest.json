@@ -1,0 +1,18 @@
+{
+  "domain": "ssh_command",
+  "name": "SSH Command",
+  "codeowners": [
+    "@gensyn"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/gensyn/ssh_command",
+  "homekit": {},
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/gensyn/ssh_command/issues",
+  "quality_scale": "bronze",
+  "requirements": ["asyncssh==2.22.0", "aiofiles==25.1.0"],
+  "ssdp": [],
+  "version": "0.0.0",
+  "zeroconf": []
+}

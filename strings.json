@@ -1,0 +1,76 @@
+{
+  "config": {
+    "abort": {
+      "single_instance_allowed": "Only a single instance of SSH Command is allowed."
+    }
+  },
+  "services": {
+    "execute": {
+        "name": "Execute SSH Command",
+        "description": "Executes a specified command on a remote server via SSH.",
+        "fields": {
+            "host": {
+                "name": "Host",
+                "description": "Hostname or IP address of the remote server."
+            },
+            "username": {
+                "name": "Username",
+                "description": "Username for SSH authentication."
+            },
+            "key_file": {
+                "name": "Key File",
+                "description": "Path to the SSH private key file for key-based authentication."
+            },
+            "command": {
+                "name": "Command",
+                "description": "The command to execute on the host."
+            },
+            "script_file": {
+                "name": "Script File",
+                "description": "Path to the script file to execute on the host."
+            },
+            "check_known_hosts": {
+                "name": "Check Known Hosts",
+                "description": "Whether to verify the host against the known hosts file."
+            },
+            "known_hosts": {
+                "name": "Known Hosts",
+                "description": "Known hosts in a valid format for asyncssh."
+            },
+            "timeout": {
+                "name": "Timeout",
+                "description": "Maximum time to wait for the command to complete (in seconds)."
+            }
+        }
+    }
+  },
+  "exceptions": {
+    "username_password_both_required": {
+      "message": "When providing a username, also provide a password and vice versa."
+    },
+    "username_password_or_key_file": {
+      "message": "Either username/password or key file must be provided."
+    },
+    "command_or_script_file": {
+      "message": "Either command or script file must be provided."
+    },
+    "key_file_not_found": {
+      "message": "Could not find key file."
+    },
+    "script_file_not_found": {
+      "message": "Could not find script file."
+    },
+    "known_hosts_with_check_disabled": {
+      "message": "Known hosts provided while check known hosts is disabled."
+    },
+    "host_key_not_verifiable": {
+      "message": "The host key could not be verified."
+    },
+    "login_failed": {
+      "message": "SSH login failed."
+    },
+    "host_not_reachable": {
+      "message": "Host is not reachable."
+    }
+  }
+}

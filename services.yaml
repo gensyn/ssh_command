@@ -1,0 +1,61 @@
+execute:
+  name: Execute SSH Command
+  description: >
+    Executes a specified command on a remote server via SSH.
+  fields:
+    host:
+      name: Host
+      description: Hostname or IP address of the remote server.
+      required: true
+      selector:
+        text:
+    username:
+      name: Username
+      description: Username for SSH authentication (optional if using key-based authentication).
+      required: false
+      selector:
+        text:
+    password:
+      name: Password
+      description: Password for SSH authentication (optional if using key-based authentication).
+      required: false
+      selector:
+        text:
+    key_file:
+      name: Key File
+      description: Path to the SSH private key file for key-based authentication (optional if using username/password).
+      required: false
+      selector:
+        text:
+    command:
+      name: Command
+      description: The command to execute on the host.
+      required: false
+      selector:
+        text:
+    script_file:
+      name: Script file
+      description: The script to execute on the host.
+      required: false
+      selector:
+        text:
+    check_known_hosts:
+      name: Check Known Hosts
+      description: Whether to verify the host against known hosts.
+      required: false
+      default: true
+      selector:
+        boolean:
+    known_hosts:
+      name: Known Hosts
+      description: Path to the known hosts file or string of the known hosts.
+      required: false
+      selector:
+        text:
+    timeout:
+      name: Timeout
+      description: Timeout in seconds for the SSH command execution.
+      required: false
+      default: 30
+      selector:
+        number:

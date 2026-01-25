@@ -1,0 +1,76 @@
+{
+  "config": {
+    "abort": {
+      "single_instance_allowed": "Nur eine Instanz von SSH Command ist erlaubt."
+    }
+  },
+  "services": {
+    "execute": {
+        "name": "SSH Command ausführen",
+        "description": "Führt einen SSH-Befehl oder ein Skript auf einem Remote-Host aus.",
+        "fields": {
+            "host": {
+                "name": "Host",
+                "description": "Hostname oder IP-Adresse des Zielhosts."
+            },
+            "username": {
+                "name": "Benutzername",
+                "description": "Der Benutzername für die SSH-Anmeldung (optional, wenn Schlüsseldatei verwendet wird)."
+            },
+            "key_file": {
+                "name": "Schlüsseldatei",
+                "description": "Der Pfad zur privaten Schlüsseldatei für die SSH-Anmeldung"
+            },
+            "command": {
+                "name": "Befehl",
+                "description": "Der Befehl, der auf dem Host ausgeführt werden soll."
+            },
+            "script_file": {
+                "name": "Scriptdatei",
+                "description": "Der Pfad zur Skriptdatei, die auf dem Host ausgeführt werden soll."
+            },
+            "check_known_hosts": {
+                "name": "Bekannte Hosts überprüfen",
+                "description": "Ob die bekannten Hosts überprüft werden sollen."
+            },
+            "known_hosts": {
+                "name": "Bekannte Hosts",
+                "description": "Bekannte Hosts in einem validen Format für asynssh."
+            },
+            "timeout": {
+                "name": "Timeout",
+                "description": "Maximale Wartezeit für die Ausführung des Befehls (in Sekunden)."
+            }
+        }
+    }
+  },
+  "exceptions": {
+    "username_password_both_required": {
+      "message": "Beim Angeben eines Benutzernamens muss auch ein Passwort angegeben werden, und umgekehrt."
+    },
+    "username_password_or_key_file": {
+      "message": "Entweder Benutzername/Passwort oder Schlüsseldatei muss angegeben werden."
+    },
+    "command_or_script_file": {
+      "message": "Entweder Befehl oder Skriptdatei muss angegeben werden."
+    },
+    "key_file_not_found": {
+      "message": "Konnte Schlüsseldatei nicht finden."
+    },
+    "script_file_not_found": {
+      "message": "Konnte Skriptdatei nicht finden."
+    },
+    "known_hosts_with_check_disabled": {
+      "message": "Bekannte Hosts wurden angegeben, obwohl die Überprüfung deaktiviert ist."
+    },
+    "host_key_not_verifiable": {
+      "message": "Der Host-Schlüssel konnte nicht verifiziert werden."
+    },
+    "login_failed": {
+      "message": "SSH-Anmeldung fehlgeschlagen."
+    },
+    "host_not_reachable": {
+      "message": "Der Host ist nicht erreichbar."
+    }
+  }
+}
