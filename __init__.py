@@ -14,9 +14,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, CONF_HOST, CONF_COMMAND, CONF_TIMEOUT
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse, ServiceResponse
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 from .const import DOMAIN, SERVICE_EXECUTE, CONF_KEY_FILE, CONF_SCRIPT_FILE, CONST_DEFAULT_TIMEOUT, \
     CONF_CHECK_KNOWN_HOSTS, CONF_KNOWN_HOSTS
+
+CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
 async def _validate_service_data(data: dict[str, Any]) -> None:
