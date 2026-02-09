@@ -8,11 +8,11 @@
   "services": {
     "execute": {
         "name": "Execute SSH Command",
-        "description": "Executes a specified command on a remote server via SSH.",
+        "description": "Executes a specified command on a remote machine via SSH.",
         "fields": {
             "host": {
                 "name": "Host",
-                "description": "Hostname or IP address of the remote server."
+                "description": "Hostname or IP address of the remote machine."
             },
             "username": {
                 "name": "Username",
@@ -24,15 +24,15 @@
             },
             "command": {
                 "name": "Command",
-                "description": "The command to execute on the host."
+                "description": "The command to execute on the machine."
             },
             "script_file": {
                 "name": "Script File",
-                "description": "Path to the script file to execute on the host."
+                "description": "Path to the script file to execute on the machine."
             },
             "check_known_hosts": {
                 "name": "Check Known Hosts",
-                "description": "Whether to verify the host against the known hosts file."
+                "description": "Whether to verify the machine against the known_hosts file."
             },
             "known_hosts": {
                 "name": "Known Hosts",
@@ -46,13 +46,10 @@
     }
   },
   "exceptions": {
-    "username_password_both_required": {
-      "message": "When providing a username, also provide a password and vice versa."
+    "password_or_key_file_required": {
+      "message": "Either password or key file must be provided."
     },
-    "username_password_or_key_file": {
-      "message": "Either username/password or key file must be provided."
-    },
-    "command_or_script_file": {
+    "command_or_input": {
       "message": "Either command or script file must be provided."
     },
     "key_file_not_found": {
@@ -65,13 +62,16 @@
       "message": "Known hosts provided while check known hosts is disabled."
     },
     "host_key_not_verifiable": {
-      "message": "The host key could not be verified."
+      "message": "The host could not be verified."
     },
     "login_failed": {
       "message": "SSH login failed."
     },
     "host_not_reachable": {
       "message": "Host is not reachable."
+    },
+    "connection_timed_out": {
+      "message": "Connection to the host timed out."
     }
   }
 }

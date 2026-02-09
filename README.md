@@ -6,7 +6,7 @@
 
 Minimal Home Assistant custom component that exposes a single service to execute commands on remote hosts over SSH: `ssh_command.execute`.
 
-This integration does not create entities. It only registers the `ssh_command.execute` service.
+This integration does not create devices or entities. It only registers the `ssh_command.execute` service.
 
 ---
 
@@ -39,22 +39,22 @@ This integration does not create entities. It only registers the `ssh_command.ex
 #### Parameters
 
 - `host` (required) — Hostname or IP address of the remote server
-- `username` — SSH username (required together with `password`)
-- `password` — SSH password (required together with `username`)
-- `key_file` — Path to an SSH private key file (use instead of username/password)
+- `username` (required) — SSH username
+- `password` — SSH password (use instead of key_file)
+- `key_file` — Path to an SSH private key file (use instead of password)
 - `command` — Command string to execute on the host
-- `script_file` — Path to a local script file; its contents are sent to the remote process stdin
+- `input` — Input to send to the `stdin` of the host. If this is a file path, the content of the file will be sent.
 - `check_known_hosts` (default: `true`) — Verify host key against known hosts
 - `known_hosts` — Path or string of the known hosts (only valid when `check_known_hosts` is `true`)
 - `timeout` (default: `30`) — Timeout in seconds for the SSH command execution
 
-All parameters are optional in the raw schema except `host` — the service enforces required combinations and file existence checks described below.
+All parameters are optional in the raw schema except `host` and `username` — the service enforces required combinations and file existence checks described below.
 
 #### Validation rules enforced by the service
 
-- Either `username`+`password` or `key_file` must be provided
-- Either `command` or `script_file` or both must be provided
-- If `key_file` or `script_file` is provided, the file must exist on the Home Assistant filesystem
+- Either `password` or `key_file` must be provided
+- Either `command` or `input` or both must be provided
+- If `key_file` is provided, the file must exist on the Home Assistant filesystem
 - `known_hosts` may not be provided when `check_known_hosts` is `false`
 
 ### Return values
@@ -82,13 +82,18 @@ service: ssh_command.execute
 data:
   host: example.local
   key_file: /config/ssh/id_rsa
-  script_file: /config/scripts/deploy.sh
+  input: /config/scripts/deploy.sh
   timeout: 60
 ```
 
-To capture the response in automations that support service responses, use the platform's service response features (the result contains output, error, exit_status).
+To capture the response in automations that support service responses, use the platform's service response features (the result contains `output`, `error`, `exit_status`).
 
 ---
+
+## ⚠️ Known issues
+
+- If you are using HassOS and enable `check_known_hosts` without explicitly providing `known_hosts`, this will probably fail with an error that the `known_hosts` file can not be found, as the file might not be accessible from within Home Assistant. Either disable host checking (not recommended), or provide `known_hosts` explicitly. See the [asyncssh Documentation](https://asyncssh.readthedocs.io/en/stable/api.html#known-hosts) for valid formats.
+  - Similar errors might occur in `Docker` installations.
 
 ## 🚧 Future Development
 
@@ -117,4 +122,4 @@ This project is licensed under the terms specified in the [MIT License](https://
 
 ## ⭐ Support
 
-If you find Task Tracker useful, please consider giving it a star on GitHub! It helps others discover the project. 
+If you find SSH Command useful, please consider giving it a star on GitHub! It helps others discover the project. 

@@ -12,7 +12,7 @@ execute:
     username:
       name: Username
       description: Username for SSH authentication (optional if using key-based authentication).
-      required: false
+      required: true
       selector:
         text:
     password:
@@ -33,15 +33,15 @@ execute:
       required: false
       selector:
         text:
-    script_file:
-      name: Script file
-      description: The script to execute on the host.
+    input:
+      name: Input
+      description: Input to send to the `stdin` of the host.
       required: false
       selector:
         text:
     check_known_hosts:
       name: Check Known Hosts
-      description: Whether to verify the host against known hosts.
+      description: Whether to verify the host against the `known_hosts` file.
       required: false
       default: true
       selector:
