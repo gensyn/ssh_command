@@ -1,0 +1,2 @@
+aiofiles==25.1.0
+asyncssh==2.22.0
