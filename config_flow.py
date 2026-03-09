@@ -17,11 +17,11 @@ class SshCommandConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(
-            self, user_input: dict[str, Any] | None = None
+            self, _user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the initial step."""
         # Check if already configured
-        if self._async_current_entries() or self.hass.data.get(DOMAIN):
+        if self._async_current_entries() or self.hass.data.get(DOMAIN):  # pylint: disable=no-member
             return self.async_abort(reason="single_instance_allowed")
 
         return self.async_create_entry(title="SSH Command", data={})
