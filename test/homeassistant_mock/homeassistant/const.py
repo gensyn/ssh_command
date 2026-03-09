@@ -1,0 +1,6 @@
+CONF_USERNAME = "username"
+CONF_PASSWORD = "password"
+CONF_HOST = "host"
+CONF_COMMAND = "command"
+CONF_TIMEOUT = "timeout"
+CONF_ERROR = "error"
