@@ -19,7 +19,7 @@ from homeassistant.helpers.typing import ConfigType
 from .const import DOMAIN, SERVICE_EXECUTE, CONF_KEY_FILE, CONF_INPUT, CONST_DEFAULT_TIMEOUT, \
     CONF_CHECK_KNOWN_HOSTS, CONF_KNOWN_HOSTS, CONF_CLIENT_KEYS, CONF_CHECK, CONF_OUTPUT, CONF_EXIT_STATUS
 
-CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
+CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)  # pylint: disable=invalid-name
 
 
 async def _validate_service_data(data: dict[str, Any]) -> None:
@@ -77,7 +77,20 @@ SERVICE_EXECUTE_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def _resolve_known_hosts(hass: HomeAssistant, check_known_hosts: bool, known_hosts: str | None) -> str | None:
+    """Resolve the known_hosts value for the SSH connection."""
+    if not check_known_hosts:
+        return None
+    if not known_hosts:
+        known_hosts = str(Path('~', '.ssh', CONF_KNOWN_HOSTS).expanduser())
+    if await exists(known_hosts):
+        # open the known hosts file asynchronously, otherwise Home Assistant will complain about blocking I/O
+        return await hass.async_add_executor_job(read_known_hosts, known_hosts)
+    return known_hosts
+
+
+async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
+    """Set up the SSH Command integration."""
     async def async_execute(service_call: ServiceCall) -> ServiceResponse:
         await _validate_service_data(service_call.data)
         host = service_call.data.get(CONF_HOST)
@@ -101,18 +114,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             CONF_USERNAME: username,
             CONF_PASSWORD: password,
             CONF_CLIENT_KEYS: key_file,
+            CONF_KNOWN_HOSTS: await _resolve_known_hosts(hass, check_known_hosts, known_hosts),
         }
-
-        if check_known_hosts:
-            if not known_hosts:
-                known_hosts = str(Path('~', '.ssh', CONF_KNOWN_HOSTS).expanduser())
-            if await exists(known_hosts):
-                # open the known hosts file asynchronously, otherwise Home Assistant will complain about blocking I/O
-                conn_kwargs[CONF_KNOWN_HOSTS] = await hass.async_add_executor_job(read_known_hosts, known_hosts)
-            else:
-                conn_kwargs[CONF_KNOWN_HOSTS] = known_hosts
-        else:
-            conn_kwargs[CONF_KNOWN_HOSTS] = None
 
         run_kwargs = {
             CONF_COMMAND: command,
@@ -126,32 +129,32 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         try:
             async with connect(**conn_kwargs) as conn:
                 result = await conn.run(**run_kwargs)
-        except HostKeyNotVerifiable:
+        except HostKeyNotVerifiable as exc:
             raise ServiceValidationError(
                 "The host key could not be verified.",
                 translation_domain=DOMAIN,
                 translation_key="host_key_not_verifiable",
-            )
-        except PermissionDenied:
+            ) from exc
+        except PermissionDenied as exc:
             raise ServiceValidationError(
                 "SSH login failed.",
                 translation_domain=DOMAIN,
                 translation_key="login_failed",
-            )
-        except TimeoutError:
+            ) from exc
+        except TimeoutError as exc:
             raise ServiceValidationError(
                 "Connection timed out.",
                 translation_domain=DOMAIN,
                 translation_key="connection_timed_out",
-            )
+            ) from exc
         except OSError as e:
             if e.strerror == 'Temporary failure in name resolution':
                 raise ServiceValidationError(
                     "Host is not reachable.",
                     translation_domain=DOMAIN,
                     translation_key="host_not_reachable",
-                )
-            raise e
+                ) from e
+            raise
 
         return {
             CONF_OUTPUT: result.stdout,
@@ -170,11 +173,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(_hass: HomeAssistant, _entry: ConfigEntry) -> bool:
     """Set up SSH Command from a config entry. Nothing to do here."""
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(_hass: HomeAssistant, _entry: ConfigEntry) -> bool:
     """Unload a config entry. Nothing to do here."""
     return True
