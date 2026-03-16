@@ -50,13 +50,16 @@
       "message": "Either password or key file must be provided."
     },
     "command_or_input": {
-      "message": "Either command or script file must be provided."
+      "message": "Either command or input must be provided."
     },
     "key_file_not_found": {
       "message": "Could not find key file."
     },
     "known_hosts_with_check_disabled": {
       "message": "Known hosts provided while check known hosts is disabled."
+    },
+    "integration_not_set_up": {
+      "message": "SSH Command integration is not set up."
     },
     "host_key_not_verifiable": {
       "message": "The host could not be verified."

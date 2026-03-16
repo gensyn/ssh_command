@@ -1,4 +1,5 @@
 import os
+import socket
 import sys
 import tempfile
 import unittest
@@ -122,8 +123,7 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ctx.exception.translation_key, "connection_timed_out")
 
     async def test_name_resolution_failure(self):
-        err = OSError()
-        err.strerror = "Temporary failure in name resolution"
+        err = socket.gaierror("Name or service not known")
         service_call = self._make_service_call(SERVICE_DATA_BASE)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(err)):
@@ -135,7 +135,6 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
 
     async def test_other_oserror_is_reraised(self):
         err = OSError("something else")
-        err.strerror = "something else"
         service_call = self._make_service_call(SERVICE_DATA_BASE)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(err)):
