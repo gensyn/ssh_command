@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigFlowResult
+
 from .const import DOMAIN
 
 
