@@ -6,6 +6,8 @@ ConfigFlowResult = dict
 
 
 class ConfigFlow:
+    single_instance_allowed = False
+
     def __init_subclass__(cls, domain=None, **kwargs):
         super().__init_subclass__(**kwargs)
         if domain is not None:

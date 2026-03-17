@@ -11,6 +11,7 @@ handler validates input and delegates to this class.
 from __future__ import annotations
 
 import logging
+import socket
 from pathlib import Path
 from typing import Any
 
@@ -88,30 +89,34 @@ class SshCommandCoordinator:
             async with connect(**conn_kwargs) as conn:
                 result = await conn.run(**run_kwargs)
         except HostKeyNotVerifiable as exc:
+            _LOGGER.warning("Host key not verifiable for %s: %s", host, exc)
             raise ServiceValidationError(
                 "The host key could not be verified.",
                 translation_domain=DOMAIN,
                 translation_key="host_key_not_verifiable",
             ) from exc
         except PermissionDenied as exc:
+            _LOGGER.warning("SSH login failed for %s@%s: %s", username, host, exc)
             raise ServiceValidationError(
                 "SSH login failed.",
                 translation_domain=DOMAIN,
                 translation_key="login_failed",
             ) from exc
         except TimeoutError as exc:
+            _LOGGER.warning("SSH connection to %s timed out: %s", host, exc)
             raise ServiceValidationError(
                 "Connection timed out.",
                 translation_domain=DOMAIN,
                 translation_key="connection_timed_out",
             ) from exc
-        except OSError as e:
-            if e.strerror == 'Temporary failure in name resolution':
+        except OSError as exc:
+            if isinstance(exc, socket.gaierror):
+                _LOGGER.warning("Host %s is not reachable: %s", host, exc)
                 raise ServiceValidationError(
                     "Host is not reachable.",
                     translation_domain=DOMAIN,
                     translation_key="host_not_reachable",
-                ) from e
+                ) from exc
             raise
 
         return {
@@ -125,7 +130,7 @@ class SshCommandCoordinator:
         if not check_known_hosts:
             return None
         if not known_hosts:
-            known_hosts = str(Path('~', '.ssh', CONF_KNOWN_HOSTS).expanduser())
+            known_hosts = str(Path("~", ".ssh", "known_hosts").expanduser())
         if await exists(known_hosts):
             return await self.hass.async_add_executor_job(read_known_hosts, known_hosts)
         return known_hosts

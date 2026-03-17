@@ -42,11 +42,5 @@ class TestConfigFlowAsyncStepUser(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["type"], "abort")
         self.assertEqual(result["reason"], "single_instance_allowed")
 
-    async def test_aborts_when_domain_in_hass_data(self):
-        flow = self._make_flow()
-        flow.hass.data[DOMAIN] = object()
-
-        result = await flow.async_step_user()
-
-        self.assertEqual(result["type"], "abort")
-        self.assertEqual(result["reason"], "single_instance_allowed")
+    def test_single_instance_allowed_is_set(self):
+        self.assertTrue(SshCommandConfigFlow.single_instance_allowed)

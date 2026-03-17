@@ -1,3 +1,4 @@
+import socket
 import sys
 import unittest
 from pathlib import Path
@@ -103,8 +104,7 @@ class TestSshCommandCoordinator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ctx.exception.translation_key, "connection_timed_out")
 
     async def test_async_execute_name_resolution_failure(self):
-        err = OSError()
-        err.strerror = "Temporary failure in name resolution"
+        err = socket.gaierror("Name or service not known")
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(err)):
             with patch("ssh_command.coordinator.exists", return_value=False):
@@ -115,7 +115,6 @@ class TestSshCommandCoordinator(unittest.IsolatedAsyncioTestCase):
 
     async def test_async_execute_other_oserror_reraised(self):
         err = OSError("something else")
-        err.strerror = "something else"
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(err)):
             with patch("ssh_command.coordinator.exists", return_value=False):

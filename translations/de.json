@@ -50,13 +50,16 @@
       "message": "Entweder Passwort oder Schlüsseldatei muss angegeben werden."
     },
     "command_or_input": {
-      "message": "Entweder Befehl oder Skriptdatei muss angegeben werden."
+      "message": "Entweder Befehl oder Eingabe muss angegeben werden."
     },
     "key_file_not_found": {
       "message": "Konnte Schlüsseldatei nicht finden."
     },
     "known_hosts_with_check_disabled": {
       "message": "Bekannte Hosts wurden angegeben, obwohl die Überprüfung deaktiviert ist."
+    },
+    "integration_not_set_up": {
+      "message": "Die SSH-Command-Integration ist nicht eingerichtet."
     },
     "host_key_not_verifiable": {
       "message": "Der Host konnte nicht verifiziert werden."

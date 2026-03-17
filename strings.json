@@ -18,6 +18,10 @@
                 "name": "Username",
                 "description": "Username for SSH authentication."
             },
+            "password": {
+                "name": "Password",
+                "description": "Password for SSH authentication (optional if using key-based authentication)."
+            },
             "key_file": {
                 "name": "Key File",
                 "description": "Path to the SSH private key file for key-based authentication."
@@ -26,9 +30,9 @@
                 "name": "Command",
                 "description": "The command to execute on the machine."
             },
-            "script_file": {
-                "name": "Script File",
-                "description": "Path to the script file to execute on the machine."
+            "input": {
+                "name": "Input",
+                "description": "Input to send to the standard input of the remote process."
             },
             "check_known_hosts": {
                 "name": "Check Known Hosts",
@@ -50,16 +54,16 @@
       "message": "Either password or key file must be provided."
     },
     "command_or_input": {
-      "message": "Either command or script file must be provided."
+      "message": "Either command or input must be provided."
     },
     "key_file_not_found": {
       "message": "Could not find key file."
     },
-    "script_file_not_found": {
-      "message": "Could not find script file."
-    },
     "known_hosts_with_check_disabled": {
       "message": "Known hosts provided while check known hosts is disabled."
+    },
+    "integration_not_set_up": {
+      "message": "SSH Command integration is not set up."
     },
     "host_key_not_verifiable": {
       "message": "The host could not be verified."
