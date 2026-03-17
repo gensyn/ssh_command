@@ -27,27 +27,26 @@ class TestValidateServiceData(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ctx.exception.translation_key, "command_or_input")
 
     async def test_key_file_not_found_raises(self):
-        with patch("ssh_command.exists", return_value=False):
+        with patch("os.path.exists", return_value=False):
             with self.assertRaises(ServiceValidationError) as ctx:
                 await _validate_service_data({"key_file": "/nonexistent/key", "command": "ls"})
         self.assertEqual(ctx.exception.translation_key, "key_file_not_found")
 
     async def test_known_hosts_with_check_disabled_raises(self):
-        with patch("ssh_command.exists", return_value=True):
-            with self.assertRaises(ServiceValidationError) as ctx:
-                await _validate_service_data({
-                    "password": "secret",
-                    "command": "ls",
-                    "known_hosts": "/etc/ssh/known_hosts",
-                    "check_known_hosts": False,
-                })
+        with self.assertRaises(ServiceValidationError) as ctx:
+            await _validate_service_data({
+                "password": "secret",
+                "command": "ls",
+                "known_hosts": "/etc/ssh/known_hosts",
+                "check_known_hosts": False,
+            })
         self.assertEqual(ctx.exception.translation_key, "known_hosts_with_check_disabled")
 
     async def test_valid_password_and_command(self):
         await _validate_service_data({"password": "secret", "command": "echo hi"})
 
     async def test_valid_key_file_and_input(self):
-        with patch("ssh_command.exists", return_value=True):
+        with patch("os.path.exists", return_value=True):
             await _validate_service_data({"key_file": "/home/user/.ssh/id_rsa", "input": "some text"})
 
     async def test_valid_known_hosts_with_check_enabled(self):

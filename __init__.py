@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 import voluptuous as vol
-from aiofiles.ospath import exists
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, CONF_HOST, CONF_COMMAND, CONF_TIMEOUT
@@ -41,7 +41,7 @@ async def _validate_service_data(data: dict[str, Any]) -> None:
             translation_key="command_or_input",
         )
 
-    if has_key_file and not await exists(data[CONF_KEY_FILE]):
+    if has_key_file and not os.path.exists(data[CONF_KEY_FILE]):
         raise ServiceValidationError(
             "Could not find key file.",
             translation_domain=DOMAIN,
