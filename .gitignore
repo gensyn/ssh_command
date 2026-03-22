@@ -1,4 +1,5 @@
-/htmlcov/
-/.coverage
 __pycache__/
 *.pyc
+/htmlcov/
+/.coverage
+custom_components/
