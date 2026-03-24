@@ -216,19 +216,23 @@ def ha_api(ha_token: str) -> requests.Session:
 def ensure_integration(ha_api: requests.Session) -> Generator[None, None, None]:
     """Ensure the SSH Command integration is set up before a test runs.
 
-    Tears down the integration (removes the config entry) after the test.
+    After the test the environment is restored to its exact pre-test state:
+    - Any entries added during the test are removed.
+    - Any entries that were present before but removed during the test are
+      re-added, so subsequent test runs start from the same baseline.
     """
-    # Check whether the integration is already configured
+    # Snapshot state before the test
     resp = ha_api.get(f"{HA_URL}/api/config/config_entries/entry")
     resp.raise_for_status()
-    entries_before = {
+    entries_before: set[str] = {
         e["entry_id"]
         for e in resp.json()
         if e.get("domain") == "ssh_command"
     }
+    was_present = bool(entries_before)
 
-    # If not present, initiate the config flow
-    if not entries_before:
+    # If the integration is not yet configured, add it now
+    if not was_present:
         flow_resp = ha_api.post(
             f"{HA_URL}/api/config/config_entries/flow",
             json={"handler": "ssh_command"},
@@ -237,9 +241,50 @@ def ensure_integration(ha_api: requests.Session) -> Generator[None, None, None]:
 
     yield
 
-    # Teardown: remove any entries that were added during the test
+    # --- Teardown: restore pre-test state ---
     resp = ha_api.get(f"{HA_URL}/api/config/config_entries/entry")
     resp.raise_for_status()
-    for entry in resp.json():
-        if entry.get("domain") == "ssh_command" and entry["entry_id"] not in entries_before:
-            ha_api.delete(f"{HA_URL}/api/config/config_entries/entry/{entry['entry_id']}")
+    entries_after: set[str] = {
+        e["entry_id"]
+        for e in resp.json()
+        if e.get("domain") == "ssh_command"
+    }
+
+    # Remove entries that were added during the test
+    for entry_id in entries_after - entries_before:
+        ha_api.delete(f"{HA_URL}/api/config/config_entries/entry/{entry_id}")
+
+    # If the integration was absent before and the fixture added it, it was
+    # already in entries_before == {} so the loop above handles removal.
+    # If the integration was present before but the test removed it, restore it.
+    if was_present and not entries_after:
+        _add_integration(ha_api)
+
+
+def _get_ssh_command_entry_ids(ha_api: requests.Session) -> set[str]:
+    """Return the set of current ssh_command config-entry IDs."""
+    resp = ha_api.get(f"{HA_URL}/api/config/config_entries/entry")
+    resp.raise_for_status()
+    return {e["entry_id"] for e in resp.json() if e.get("domain") == "ssh_command"}
+
+
+def _add_integration(ha_api: requests.Session) -> None:
+    """Initiate the SSH Command config flow.
+
+    The call starts the config flow; Home Assistant will immediately complete
+    it and create the single config entry (SSH Command has no form fields and
+    single_instance_allowed=True).  The HTTP response status is validated but
+    the caller is responsible for confirming the resulting entry state when
+    strict verification is needed.
+    """
+    resp = ha_api.post(
+        f"{HA_URL}/api/config/config_entries/flow",
+        json={"handler": "ssh_command"},
+    )
+    resp.raise_for_status()
+
+
+def _remove_all_ssh_command_entries(ha_api: requests.Session) -> None:
+    """Delete every ssh_command config entry from Home Assistant."""
+    for entry_id in _get_ssh_command_entry_ids(ha_api):
+        ha_api.delete(f"{HA_URL}/api/config/config_entries/entry/{entry_id}")

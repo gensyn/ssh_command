@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
-import pytest
 from typing import Any
+
+import pytest
 import requests
 from playwright.sync_api import Page, expect
 
-from conftest import HA_URL
+from conftest import (
+    HA_URL,
+    _add_integration,
+    _get_ssh_command_entry_ids,
+    _remove_all_ssh_command_entries,
+)
 
 
 class TestIntegrationSetup:
@@ -70,7 +76,7 @@ class TestIntegrationSetup:
                 )
 
     def test_single_instance_enforced(self, ha_api: requests.Session) -> None:
-        """A second setup attempt should be aborted by the single-instance guard."""
+        """A second setup attempt must be aborted by the single-instance guard."""
         # First setup
         first = ha_api.post(
             f"{HA_URL}/api/config/config_entries/flow",
@@ -78,25 +84,20 @@ class TestIntegrationSetup:
         )
         assert first.status_code in (200, 201), first.text
 
-        # Second setup should result in an abort
+        # Second setup must return an abort – never create a second entry
         second = ha_api.post(
             f"{HA_URL}/api/config/config_entries/flow",
             json={"handler": "ssh_command"},
         )
         assert second.status_code in (200, 201), second.text
         result_type = second.json().get("type")
-        # Depending on HA version the abort is returned immediately
-        assert result_type in ("abort", "create_entry"), (
-            f"Expected abort or immediate create_entry, got: {result_type}"
+        assert result_type == "abort", (
+            f"Expected 'abort' when adding integration a second time, got: {result_type!r}"
         )
+        assert second.json().get("reason") == "single_instance_allowed"
 
         # Cleanup
-        entries_resp = ha_api.get(f"{HA_URL}/api/config/config_entries/entry")
-        for entry in entries_resp.json():
-            if entry["domain"] == "ssh_command":
-                ha_api.delete(
-                    f"{HA_URL}/api/config/config_entries/entry/{entry['entry_id']}"
-                )
+        _remove_all_ssh_command_entries(ha_api)
 
     def test_remove_integration(self, ha_api: requests.Session) -> None:
         """Removing a config entry succeeds and the entry disappears from the list."""
@@ -157,3 +158,142 @@ class TestIntegrationSetup:
             },
         )
         assert resp.status_code == 400, resp.text
+
+
+class TestIntegrationLifecycle:
+    """Single end-to-end lifecycle test covering all five requirements:
+
+    1. Add the integration.
+    2. Assert it cannot be added a second time.
+    3. Send commands covering all service parameters.
+    4. Remove the integration.
+    5. Assert removal leaves the environment identical to its pre-test state
+       so the test can be repeated with no side effects.
+    """
+
+    def test_full_lifecycle(self, ha_api: requests.Session, ssh_server_1: dict, ssh_server_2: dict) -> None:
+        """Complete add → use → remove → verify-clean lifecycle."""
+
+        # ------------------------------------------------------------------ #
+        # 0. Precondition: start from a clean state (no integration present). #
+        #    If a previous run left an entry behind, remove it first so this  #
+        #    test is idempotent.                                                #
+        # ------------------------------------------------------------------ #
+        assert (ssh_server_1["host"], ssh_server_1["port"]) != (ssh_server_2["host"], ssh_server_2["port"]), (
+            "ssh_server_1 and ssh_server_2 must be distinct servers for the multi-server scenario to be meaningful"
+        )
+        _remove_all_ssh_command_entries(ha_api)
+        assert _get_ssh_command_entry_ids(ha_api) == set(), (
+            "Precondition failed: ssh_command entries still present after cleanup"
+        )
+
+        # ------------------------------------------------------------------ #
+        # 1. Add the integration via the config flow.                          #
+        # ------------------------------------------------------------------ #
+        add_resp = ha_api.post(
+            f"{HA_URL}/api/config/config_entries/flow",
+            json={"handler": "ssh_command"},
+        )
+        assert add_resp.status_code in (200, 201), add_resp.text
+        assert add_resp.json().get("type") == "create_entry", (
+            f"Expected 'create_entry', got: {add_resp.json().get('type')!r}"
+        )
+
+        entry_ids_after_add = _get_ssh_command_entry_ids(ha_api)
+        assert len(entry_ids_after_add) == 1, (
+            f"Expected exactly 1 ssh_command entry, found: {len(entry_ids_after_add)}"
+        )
+        entry_id = next(iter(entry_ids_after_add))
+
+        # ------------------------------------------------------------------ #
+        # 2. Assert the integration cannot be added a second time.             #
+        # ------------------------------------------------------------------ #
+        second_add = ha_api.post(
+            f"{HA_URL}/api/config/config_entries/flow",
+            json={"handler": "ssh_command"},
+        )
+        assert second_add.status_code in (200, 201), second_add.text
+        assert second_add.json().get("type") == "abort", (
+            f"Expected 'abort' on second add, got: {second_add.json().get('type')!r}"
+        )
+        assert second_add.json().get("reason") == "single_instance_allowed"
+        # Still exactly one entry – the second attempt must not create another
+        assert _get_ssh_command_entry_ids(ha_api) == {entry_id}
+
+        # ------------------------------------------------------------------ #
+        # 3. Send commands covering all service parameters.                    #
+        # ------------------------------------------------------------------ #
+        def call(payload: dict) -> dict:
+            r = ha_api.post(
+                f"{HA_URL}/api/services/ssh_command/execute?return_response",
+                json=payload,
+            )
+            assert r.status_code == 200, f"Service call failed: {r.text}"
+            return r.json()
+
+        base = {
+            "host": ssh_server_1["host"],
+            "username": ssh_server_1["username"],
+            "password": ssh_server_1["password"],
+            "check_known_hosts": False,
+        }
+
+        # host + username + password + command + check_known_hosts
+        data = call({**base, "command": "echo hello"})
+        assert "hello" in data["output"]
+        assert data["exit_status"] == 0
+
+        # timeout parameter
+        data = call({**base, "command": "echo timeout_ok", "timeout": 15})
+        assert "timeout_ok" in data["output"]
+
+        # command writing to stderr
+        data = call({**base, "command": "echo err_out >&2"})
+        assert "err_out" in data["error"]
+
+        # non-zero exit status
+        data = call({**base, "command": "exit 2"})
+        assert data["exit_status"] == 2
+
+        # input parameter: send text to stdin via the 'cat' command
+        data = call({**base, "command": "cat", "input": "stdin_content\n"})
+        assert "stdin_content" in data["output"]
+
+        # second SSH server
+        base2 = {
+            "host": ssh_server_2["host"],
+            "username": ssh_server_2["username"],
+            "password": ssh_server_2["password"],
+            "check_known_hosts": False,
+        }
+        data = call({**base2, "command": "echo server2"})
+        assert "server2" in data["output"]
+
+        # ------------------------------------------------------------------ #
+        # 4. Remove the integration.                                           #
+        # ------------------------------------------------------------------ #
+        del_resp = ha_api.delete(
+            f"{HA_URL}/api/config/config_entries/entry/{entry_id}"
+        )
+        assert del_resp.status_code in (200, 204), del_resp.text
+
+        # ------------------------------------------------------------------ #
+        # 5. Assert removal and environment parity with pre-test state.        #
+        # ------------------------------------------------------------------ #
+        remaining = _get_ssh_command_entry_ids(ha_api)
+        assert remaining == set(), (
+            f"Expected no ssh_command entries after removal, found: {remaining}"
+        )
+
+        # Confirm the service is no longer usable (no coordinator present)
+        no_integration_resp = ha_api.post(
+            f"{HA_URL}/api/services/ssh_command/execute?return_response",
+            json={**base, "command": "echo hi"},
+        )
+        assert no_integration_resp.status_code == 400, (
+            "Service should return 400 when the integration is not configured"
+        )
+
+        # The test started with no integration and ends with no integration –
+        # running it again will follow exactly the same path.
+

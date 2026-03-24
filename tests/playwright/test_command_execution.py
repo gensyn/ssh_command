@@ -133,6 +133,34 @@ class TestCommandExecution:
         resp = execute(ha_api, payload)
         assert resp.status_code == 400, resp.text
 
+    def test_input_parameter_stdin(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+        """The 'input' parameter pipes text to the command's stdin."""
+        resp = execute(
+            ha_api,
+            base_payload(ssh_server_1, "cat", input="hello from stdin\n"),
+        )
+        assert resp.status_code == 200, resp.text
+        assert "hello from stdin" in resp.json()["output"]
+
+    def test_all_optional_parameters(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+        """Supplying every optional parameter in a single call works correctly."""
+        resp = execute(
+            ha_api,
+            {
+                "host": ssh_server_1["host"],
+                "username": ssh_server_1["username"],
+                "password": ssh_server_1["password"],
+                "command": "cat",
+                "input": "all_params\n",
+                "check_known_hosts": False,
+                "timeout": 20,
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert "all_params" in data["output"]
+        assert data["exit_status"] == 0
+
     def test_long_output_command(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """A command that produces a large amount of output is handled correctly."""
         resp = execute(ha_api, base_payload(ssh_server_1, "seq 1 500"))
