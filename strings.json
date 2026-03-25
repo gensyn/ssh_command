@@ -53,11 +53,17 @@
     "password_or_key_file_required": {
       "message": "Either password or key file must be provided."
     },
+    "password_and_key_file": {
+      "message": "Password and key file cannot both be provided."
+    },
     "command_or_input": {
       "message": "Either command or input must be provided."
     },
     "key_file_not_found": {
       "message": "Could not find key file."
+    },
+    "invalid_key_file": {
+      "message": "The key file is not a valid private key."
     },
     "known_hosts_with_check_disabled": {
       "message": "Known hosts provided while check known hosts is disabled."
