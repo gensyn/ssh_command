@@ -49,11 +49,17 @@
     "password_or_key_file_required": {
       "message": "Entweder Passwort oder Schlüsseldatei muss angegeben werden."
     },
+    "password_and_key_file": {
+      "message": "Passwort und Schlüsseldatei können nicht gleichzeitig angegeben werden."
+    },
     "command_or_input": {
       "message": "Entweder Befehl oder Eingabe muss angegeben werden."
     },
     "key_file_not_found": {
       "message": "Konnte Schlüsseldatei nicht finden."
+    },
+    "invalid_key_file": {
+      "message": "Die Schlüsseldatei ist kein gültiger privater Schlüssel."
     },
     "known_hosts_with_check_disabled": {
       "message": "Bekannte Hosts wurden angegeben, obwohl die Überprüfung deaktiviert ist."

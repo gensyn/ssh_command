@@ -52,7 +52,7 @@ All parameters are optional in the raw schema except `host` and `username` — t
 
 #### Validation rules enforced by the service
 
-- Either `password` or `key_file` must be provided
+- Either `password` or `key_file` must be provided, but not both
 - Either `command` or `input` or both must be provided
 - If `key_file` is provided, the file must exist on the Home Assistant filesystem
 - `known_hosts` may not be provided when `check_known_hosts` is `false`
