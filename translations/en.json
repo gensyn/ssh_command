@@ -55,6 +55,9 @@
     "key_file_not_found": {
       "message": "Could not find key file."
     },
+    "invalid_key_file": {
+      "message": "The key file is not a valid private key."
+    },
     "known_hosts_with_check_disabled": {
       "message": "Known hosts provided while check known hosts is disabled."
     },
