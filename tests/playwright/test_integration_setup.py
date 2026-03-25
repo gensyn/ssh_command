@@ -28,10 +28,18 @@ class TestIntegrationSetup:
 
     def test_add_integration_via_ui(self, page: Page) -> None:
         """Adding the SSH Command integration through the UI config flow works."""
-        # Navigate directly to the add-integration dialog URL.  This is the
-        # canonical deep-link that HA provides and is more robust than trying
-        # to pierce the shadow-DOM of the integrations page FAB button, whose
-        # element name changes between HA releases.
+        # Step 1: load the integrations page first so the HA SPA boots and
+        # recognises the localStorage token.  Navigating directly to the
+        # add-integration deep-link on a cold context sometimes lands on
+        # onboarding.html before the auth token can take effect.
+        page.goto(f"{HA_URL}/config/integrations")
+        page.wait_for_load_state("networkidle")
+        assert "/config/integrations" in page.url, (
+            f"Failed to load integrations page: {page.url}"
+        )
+
+        # Step 2: navigate to the add-integration deep-link as an SPA
+        # navigation (auth state is already established from step 1).
         page.goto(f"{HA_URL}/config/integrations/add?domain=ssh_command")
         page.wait_for_load_state("networkidle")
 
