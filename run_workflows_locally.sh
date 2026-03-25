@@ -111,41 +111,20 @@ run_workflow() {
 # ── Playwright E2E tests via docker compose ───────────────────────────────────
 # The playwright-tests.yml workflow uses `docker compose run` internally, which
 # requires a real Docker daemon.  act (Docker-in-Docker) cannot reliably run
-# that workflow, so we execute it directly via docker compose instead.
+# that workflow, so we delegate to the dedicated run_playwright_tests.sh script.
 run_playwright_tests() {
-    header "Running Playwright E2E tests via docker compose…"
+    local script="$SCRIPT_DIR/run_playwright_tests.sh"
 
-    if [[ ! -f "$SCRIPT_DIR/docker-compose.yaml" ]]; then
-        warn "docker-compose.yaml not found – skipping Playwright E2E tests."
+    if [[ ! -f "$script" ]]; then
+        warn "run_playwright_tests.sh not found – skipping Playwright E2E tests."
         return 1
     fi
 
-    local compose_cmd
-    if command_exists "docker" && sudo docker compose version &>/dev/null 2>&1; then
-        compose_cmd="sudo docker compose"
-    else
-        error "docker compose is not available. Cannot run Playwright E2E tests."
-        return 1
-    fi
-
-    info "Building Docker images…"
-    if ! $compose_cmd -f "$SCRIPT_DIR/docker-compose.yaml" build 2>&1; then
-        error "Docker image build failed."
-        return 1
-    fi
-
-    info "Running test container (this may take several minutes on first run)…"
-    local exit_code=0
-    $compose_cmd -f "$SCRIPT_DIR/docker-compose.yaml" run --rm playwright-tests 2>&1 || exit_code=$?
-
-    info "Stopping services…"
-    $compose_cmd -f "$SCRIPT_DIR/docker-compose.yaml" down -v 2>&1 || true
-
-    if [[ $exit_code -eq 0 ]]; then
+    if bash "$script"; then
         success "playwright-tests.yml passed"
         return 0
     else
-        error "playwright-tests.yml failed (exit code ${exit_code})"
+        error "playwright-tests.yml failed"
         return 1
     fi
 }
