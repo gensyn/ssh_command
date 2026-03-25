@@ -72,8 +72,7 @@ class TestSshCommandCoordinator(unittest.IsolatedAsyncioTestCase):
         mock_conn = self._make_mock_conn(stdout="hello\n", stderr="", exit_status=0)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnect(mock_conn)):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                result = await self.coordinator.async_execute(EXECUTE_DATA_BASE)
+            result = await self.coordinator.async_execute(EXECUTE_DATA_BASE)
 
         self.assertEqual(result[CONF_OUTPUT], "hello\n")
         self.assertEqual(result[CONF_ERROR], "")
@@ -81,25 +80,22 @@ class TestSshCommandCoordinator(unittest.IsolatedAsyncioTestCase):
 
     async def test_async_execute_host_key_not_verifiable(self):
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(HostKeyNotVerifiable("test"))):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                with self.assertRaises(ServiceValidationError) as ctx:
-                    await self.coordinator.async_execute(EXECUTE_DATA_BASE)
+            with self.assertRaises(ServiceValidationError) as ctx:
+                await self.coordinator.async_execute(EXECUTE_DATA_BASE)
 
         self.assertEqual(ctx.exception.translation_key, "host_key_not_verifiable")
 
     async def test_async_execute_permission_denied(self):
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(PermissionDenied("auth failed"))):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                with self.assertRaises(ServiceValidationError) as ctx:
-                    await self.coordinator.async_execute(EXECUTE_DATA_BASE)
+            with self.assertRaises(ServiceValidationError) as ctx:
+                await self.coordinator.async_execute(EXECUTE_DATA_BASE)
 
         self.assertEqual(ctx.exception.translation_key, "login_failed")
 
     async def test_async_execute_timeout(self):
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(TimeoutError())):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                with self.assertRaises(ServiceValidationError) as ctx:
-                    await self.coordinator.async_execute(EXECUTE_DATA_BASE)
+            with self.assertRaises(ServiceValidationError) as ctx:
+                await self.coordinator.async_execute(EXECUTE_DATA_BASE)
 
         self.assertEqual(ctx.exception.translation_key, "connection_timed_out")
 
@@ -107,9 +103,8 @@ class TestSshCommandCoordinator(unittest.IsolatedAsyncioTestCase):
         err = socket.gaierror("Name or service not known")
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(err)):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                with self.assertRaises(ServiceValidationError) as ctx:
-                    await self.coordinator.async_execute(EXECUTE_DATA_BASE)
+            with self.assertRaises(ServiceValidationError) as ctx:
+                await self.coordinator.async_execute(EXECUTE_DATA_BASE)
 
         self.assertEqual(ctx.exception.translation_key, "host_not_reachable")
 
@@ -117,9 +112,8 @@ class TestSshCommandCoordinator(unittest.IsolatedAsyncioTestCase):
         err = OSError("something else")
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(err)):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                with self.assertRaises(OSError):
-                    await self.coordinator.async_execute(EXECUTE_DATA_BASE)
+            with self.assertRaises(OSError):
+                await self.coordinator.async_execute(EXECUTE_DATA_BASE)
 
     async def test_resolve_known_hosts_check_disabled(self):
         result = await self.coordinator._resolve_known_hosts(False, None)
@@ -128,7 +122,7 @@ class TestSshCommandCoordinator(unittest.IsolatedAsyncioTestCase):
     async def test_resolve_known_hosts_file_exists(self):
         mock_known_hosts = MagicMock()
 
-        with patch("ssh_command.coordinator.exists", return_value=True):
+        with patch("pathlib.Path.exists", return_value=True):
             with patch("ssh_command.coordinator.read_known_hosts", return_value=mock_known_hosts) as mock_rkh:
                 result = await self.coordinator._resolve_known_hosts(True, "/home/user/.ssh/known_hosts")
 
@@ -136,13 +130,13 @@ class TestSshCommandCoordinator(unittest.IsolatedAsyncioTestCase):
         self.assertIs(result, mock_known_hosts)
 
     async def test_resolve_known_hosts_file_missing(self):
-        with patch("ssh_command.coordinator.exists", return_value=False):
+        with patch("pathlib.Path.exists", return_value=False):
             result = await self.coordinator._resolve_known_hosts(True, "/nonexistent/known_hosts")
 
         self.assertEqual(result, "/nonexistent/known_hosts")
 
     async def test_resolve_known_hosts_default_path(self):
-        with patch("ssh_command.coordinator.exists", return_value=False):
+        with patch("pathlib.Path.exists", return_value=False):
             result = await self.coordinator._resolve_known_hosts(True, None)
 
         self.assertIsInstance(result, str)
