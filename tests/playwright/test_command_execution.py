@@ -22,6 +22,14 @@ def execute(ha_api: requests.Session, payload: dict) -> requests.Response:
     )
 
 
+def svc_data(resp: requests.Response) -> dict:
+    """Extract the ssh_command service response dict from an HA API response.
+
+    HA wraps service responses in ``{"service_response": {...}, "changed_states": [...]}``.
+    """
+    return resp.json().get("service_response", resp.json())
+
+
 def base_payload(ssh_server: dict, command: str, **kwargs) -> dict:
     """Build a minimal execute payload from a server fixture and a command.
 
@@ -51,7 +59,7 @@ class TestCommandExecution:
         """A simple echo command returns the expected string on stdout."""
         resp = execute(ha_api, base_payload(ssh_server_1, "echo hello"))
         assert resp.status_code == 200, resp.text
-        data = resp.json()
+        data = svc_data(resp)
         assert "hello" in data.get("output", "")
         assert data.get("exit_status") == 0
 
@@ -59,7 +67,7 @@ class TestCommandExecution:
         """The pwd command returns a non-empty path."""
         resp = execute(ha_api, base_payload(ssh_server_1, "pwd"))
         assert resp.status_code == 200, resp.text
-        data = resp.json()
+        data = svc_data(resp)
         assert data.get("output", "").strip() != ""
         assert data.get("exit_status") == 0
 
@@ -67,7 +75,7 @@ class TestCommandExecution:
         """Multiline output is fully captured."""
         resp = execute(ha_api, base_payload(ssh_server_1, "printf 'line1\\nline2\\nline3\\n'"))
         assert resp.status_code == 200, resp.text
-        output = resp.json().get("output", "")
+        output = svc_data(resp).get("output", "")
         assert "line1" in output
         assert "line2" in output
         assert "line3" in output
@@ -76,32 +84,32 @@ class TestCommandExecution:
         """Output written to stderr is captured in the 'error' field."""
         resp = execute(ha_api, base_payload(ssh_server_1, "echo error_message >&2"))
         assert resp.status_code == 200, resp.text
-        data = resp.json()
+        data = svc_data(resp)
         assert "error_message" in data.get("error", "")
 
     def test_nonzero_exit_status(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """A failing command returns a non-zero exit status."""
         resp = execute(ha_api, base_payload(ssh_server_1, "exit 42"))
         assert resp.status_code == 200, resp.text
-        assert resp.json().get("exit_status") == 42
+        assert svc_data(resp).get("exit_status") == 42
 
     def test_zero_exit_status(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """A successful command returns exit status 0."""
         resp = execute(ha_api, base_payload(ssh_server_1, "true"))
         assert resp.status_code == 200, resp.text
-        assert resp.json().get("exit_status") == 0
+        assert svc_data(resp).get("exit_status") == 0
 
     def test_command_with_env_variable(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """Environment variable expansion works inside commands."""
         resp = execute(ha_api, base_payload(ssh_server_1, "echo $HOME"))
         assert resp.status_code == 200, resp.text
-        assert resp.json().get("output", "").strip() != ""
+        assert svc_data(resp).get("output", "").strip() != ""
 
     def test_second_ssh_server(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_2: dict) -> None:
         """Commands can be executed against the second SSH test server."""
         resp = execute(ha_api, base_payload(ssh_server_2, "echo server2"))
         assert resp.status_code == 200, resp.text
-        assert "server2" in resp.json().get("output", "")
+        assert "server2" in svc_data(resp).get("output", "")
 
     def test_command_timeout_handling(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """A command that exceeds the timeout returns a 400 error."""
@@ -140,7 +148,7 @@ class TestCommandExecution:
             base_payload(ssh_server_1, "cat", input="hello from stdin\n"),
         )
         assert resp.status_code == 200, resp.text
-        assert "hello from stdin" in resp.json()["output"]
+        assert "hello from stdin" in svc_data(resp)["output"]
 
     def test_all_optional_parameters(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """Supplying every optional parameter in a single call works correctly."""
@@ -157,7 +165,7 @@ class TestCommandExecution:
             },
         )
         assert resp.status_code == 200, resp.text
-        data = resp.json()
+        data = svc_data(resp)
         assert "all_params" in data["output"]
         assert data["exit_status"] == 0
 
@@ -165,5 +173,5 @@ class TestCommandExecution:
         """A command that produces a large amount of output is handled correctly."""
         resp = execute(ha_api, base_payload(ssh_server_1, "seq 1 500"))
         assert resp.status_code == 200, resp.text
-        output = resp.json().get("output", "")
+        output = svc_data(resp).get("output", "")
         assert "500" in output

@@ -16,9 +16,9 @@ from playwright.sync_api import Browser, BrowserContext, Page, Playwright, sync_
 # ---------------------------------------------------------------------------
 
 HA_URL: str = os.environ.get("HOMEASSISTANT_URL", "http://homeassistant:8123")
-SSH_HOST: str = os.environ.get("SSH_HOST", "ssh_docker_test")
-SSH_PORT_1: int = int(os.environ.get("SSH_PORT_1", "2222"))
-SSH_PORT_2: int = int(os.environ.get("SSH_PORT_2", "2223"))
+# Each SSH test server is a separate container (both on port 22, the default).
+SSH_HOST_1: str = os.environ.get("SSH_HOST_1", "ssh_docker_test_1")
+SSH_HOST_2: str = os.environ.get("SSH_HOST_2", "ssh_docker_test_2")
 SSH_USER: str = os.environ.get("SSH_USER", "foo")
 SSH_PASSWORD: str = os.environ.get("SSH_PASSWORD", "pass")
 
@@ -33,65 +33,103 @@ _HA_TOKEN: str | None = None
 
 
 def get_ha_token() -> str:
-    """Obtain a long-lived Home Assistant access token via the REST API.
+    """Obtain a Home Assistant access token via the login flow.
 
     On the first call the token is fetched and cached for the remainder of
-    the test session.
+    the test session.  Retries up to 5 times with a short delay to handle
+    the window immediately after HA onboarding completes.
     """
     global _HA_TOKEN  # noqa: PLW0603
     if _HA_TOKEN:
         return _HA_TOKEN
 
-    # 1. Fetch the CSRF token from the login page
-    session = requests.Session()
-    login_page = session.get(f"{HA_URL}/auth/login_flow", timeout=30)
-    login_page.raise_for_status()
+    last_exc: Exception | None = None
+    for attempt in range(5):
+        if attempt:
+            time.sleep(5)
+        try:
+            session = requests.Session()
 
-    # 2. Initiate the login flow
-    flow_resp = session.post(
-        f"{HA_URL}/auth/login_flow",
-        json={"client_id": HA_URL, "handler": ["homeassistant", None], "redirect_uri": f"{HA_URL}/"},
-        timeout=30,
-    )
-    flow_resp.raise_for_status()
-    flow_id = flow_resp.json()["flow_id"]
+            # 1. Initiate the login flow
+            flow_resp = session.post(
+                f"{HA_URL}/auth/login_flow",
+                json={
+                    "client_id": f"{HA_URL}/",
+                    "handler": ["homeassistant", None],
+                    "redirect_uri": f"{HA_URL}/",
+                },
+                timeout=30,
+            )
+            flow_resp.raise_for_status()
+            flow_id = flow_resp.json()["flow_id"]
 
-    # 3. Submit credentials
-    cred_resp = session.post(
-        f"{HA_URL}/auth/login_flow/{flow_id}",
-        json={"username": HA_USERNAME, "password": HA_PASSWORD, "client_id": HA_URL},
-        timeout=30,
-    )
-    cred_resp.raise_for_status()
-    auth_code = cred_resp.json().get("result")
+            # 2. Submit credentials
+            cred_resp = session.post(
+                f"{HA_URL}/auth/login_flow/{flow_id}",
+                json={
+                    "username": HA_USERNAME,
+                    "password": HA_PASSWORD,
+                    "client_id": f"{HA_URL}/",
+                },
+                timeout=30,
+            )
+            cred_resp.raise_for_status()
+            cred_data = cred_resp.json()
+            if cred_data.get("type") != "create_entry":
+                raise RuntimeError(
+                    f"Login flow did not complete: type={cred_data.get('type')!r}, "
+                    f"errors={cred_data.get('errors')}"
+                )
+            auth_code = cred_data["result"]
 
-    # 4. Exchange code for token
-    token_resp = session.post(
-        f"{HA_URL}/auth/token",
-        data={
-            "grant_type": "authorization_code",
-            "code": auth_code,
-            "client_id": HA_URL,
-        },
-        timeout=30,
-    )
-    token_resp.raise_for_status()
-    _HA_TOKEN = token_resp.json()["access_token"]
-    return _HA_TOKEN
+            # 3. Exchange code for token
+            token_resp = session.post(
+                f"{HA_URL}/auth/token",
+                data={
+                    "grant_type": "authorization_code",
+                    "code": auth_code,
+                    "client_id": f"{HA_URL}/",
+                },
+                timeout=30,
+            )
+            token_resp.raise_for_status()
+            _HA_TOKEN = token_resp.json()["access_token"]
+            return _HA_TOKEN
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+
+    raise RuntimeError(f"Failed to obtain HA token after 5 attempts: {last_exc}") from last_exc
 
 
-def wait_for_ha(timeout: int = 120) -> None:
-    """Block until Home Assistant is ready to accept connections."""
+def wait_for_ha(timeout: int = 300) -> None:
+    """Block until Home Assistant is fully started and accepts API requests.
+
+    Polls GET /api/onboarding which requires no authentication and therefore
+    cannot trigger HA's IP-ban mechanism.  The endpoint returns HTTP 200 even
+    during onboarding, so it is safe to use as a startup indicator.
+
+    A second pass waits for the integration to be loadable (the custom
+    component may still be installing its requirements).
+    """
     deadline = time.time() + timeout
+
+    # Phase 1: wait for the web server to respond at all
     while time.time() < deadline:
         try:
-            resp = requests.get(f"{HA_URL}/api/", timeout=5)
-            if resp.status_code in (200, 401):
-                return
+            resp = requests.get(f"{HA_URL}/api/onboarding", timeout=5)
+            if resp.status_code == 200:
+                break
         except requests.RequestException:
             pass
-        time.sleep(2)
-    raise RuntimeError(f"Home Assistant did not become ready within {timeout}s")
+        time.sleep(3)
+    else:
+        raise RuntimeError(f"Home Assistant did not become ready within {timeout}s")
+
+    # Phase 2: wait for the config-entries API to be usable (integrations loaded)
+    # We use a small fixed delay to let HA finish loading custom components and
+    # installing their requirements (asyncssh etc.) after the web server is up.
+    time.sleep(15)
+
 
 
 # ---------------------------------------------------------------------------
@@ -178,10 +216,13 @@ def page(context: BrowserContext) -> Generator[Page, None, None]:
 
 @pytest.fixture(scope="session")
 def ssh_server_1() -> dict:
-    """Return connection parameters for SSH Test Server 1."""
+    """Return connection parameters for SSH Test Server 1.
+
+    The server runs sshd on the standard port 22, which the Home Assistant
+    integration uses by default.
+    """
     return {
-        "host": SSH_HOST,
-        "port": SSH_PORT_1,
+        "host": SSH_HOST_1,
         "username": SSH_USER,
         "password": SSH_PASSWORD,
     }
@@ -189,10 +230,13 @@ def ssh_server_1() -> dict:
 
 @pytest.fixture(scope="session")
 def ssh_server_2() -> dict:
-    """Return connection parameters for SSH Test Server 2."""
+    """Return connection parameters for SSH Test Server 2.
+
+    A separate container from ssh_server_1 so the two servers are genuinely
+    independent (different hostnames).
+    """
     return {
-        "host": SSH_HOST,
-        "port": SSH_PORT_2,
+        "host": SSH_HOST_2,
         "username": SSH_USER,
         "password": SSH_PASSWORD,
     }

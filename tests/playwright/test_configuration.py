@@ -22,6 +22,11 @@ def execute(ha_api: requests.Session, payload: dict) -> requests.Response:
     )
 
 
+def svc_data(resp: requests.Response) -> dict:
+    """Extract the ssh_command service response dict from an HA API response."""
+    return resp.json().get("service_response", resp.json())
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -43,7 +48,7 @@ class TestConfiguration:
             },
         )
         assert resp.status_code == 200, resp.text
-        assert "default_timeout" in resp.json()["output"]
+        assert "default_timeout" in svc_data(resp)["output"]
 
     def test_custom_timeout_accepted(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """An explicit timeout value is accepted by the service schema."""
@@ -59,7 +64,7 @@ class TestConfiguration:
             },
         )
         assert resp.status_code == 200, resp.text
-        assert "custom_timeout" in resp.json()["output"]
+        assert "custom_timeout" in svc_data(resp)["output"]
 
     def test_check_known_hosts_false(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """Setting check_known_hosts=False bypasses host verification."""
@@ -74,7 +79,7 @@ class TestConfiguration:
             },
         )
         assert resp.status_code == 200, resp.text
-        assert "no_host_check" in resp.json()["output"]
+        assert "no_host_check" in svc_data(resp)["output"]
 
     def test_known_hosts_with_check_disabled_rejected(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """Providing known_hosts while check_known_hosts=False is a validation error."""
@@ -104,7 +109,7 @@ class TestConfiguration:
             },
         )
         assert resp.status_code == 200, resp.text
-        assert "password_auth" in resp.json()["output"]
+        assert "password_auth" in svc_data(resp)["output"]
 
     def test_key_file_not_found_rejected(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """Providing a non-existent key_file path results in a validation error."""
@@ -150,8 +155,8 @@ class TestConfiguration:
         )
         assert resp1.status_code == 200, resp1.text
         assert resp2.status_code == 200, resp2.text
-        assert "server1" in resp1.json()["output"]
-        assert "server2" in resp2.json()["output"]
+        assert "server1" in svc_data(resp1)["output"]
+        assert "server2" in svc_data(resp2)["output"]
 
     def test_username_configuration(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """The username field is correctly forwarded to the SSH connection."""
@@ -166,5 +171,5 @@ class TestConfiguration:
             },
         )
         assert resp.status_code == 200, resp.text
-        output = resp.json()["output"].strip()
+        output = svc_data(resp)["output"].strip()
         assert output == ssh_server_1["username"]

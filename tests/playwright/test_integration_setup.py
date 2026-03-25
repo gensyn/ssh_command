@@ -229,7 +229,7 @@ class TestIntegrationLifecycle:
                 json=payload,
             )
             assert r.status_code == 200, f"Service call failed: {r.text}"
-            return r.json()
+            return r.json().get("service_response", r.json())
 
         base = {
             "host": ssh_server_1["host"],

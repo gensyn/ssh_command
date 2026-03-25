@@ -22,6 +22,11 @@ def call_service(ha_api: requests.Session, payload: dict) -> requests.Response:
     )
 
 
+def svc_data(resp: requests.Response) -> dict:
+    """Extract the ssh_command service response dict from an HA API response."""
+    return resp.json().get("service_response", resp.json())
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -57,7 +62,7 @@ class TestServices:
             },
         )
         assert resp.status_code == 200, resp.text
-        data = resp.json()
+        data = svc_data(resp)
         assert "output" in data
         assert "error" in data
         assert "exit_status" in data
@@ -75,7 +80,7 @@ class TestServices:
             },
         )
         assert resp.status_code == 200, resp.text
-        assert "service_output_check" in resp.json()["output"]
+        assert "service_output_check" in svc_data(resp)["output"]
 
     def test_service_with_exit_status_error(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """A command that exits with a non-zero code is still returned as 200 with the exit code."""
@@ -90,7 +95,7 @@ class TestServices:
             },
         )
         assert resp.status_code == 200, resp.text
-        assert resp.json()["exit_status"] == 1
+        assert svc_data(resp)["exit_status"] == 1
 
     def test_service_requires_integration_setup(self, ha_api: requests.Session) -> None:
         """Calling the service without a configured integration returns 400."""
@@ -154,7 +159,7 @@ class TestServices:
             },
         )
         assert resp.status_code == 200, resp.text
-        assert "timeout_test" in resp.json()["output"]
+        assert "timeout_test" in svc_data(resp)["output"]
 
     def test_service_stderr_in_response(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """Stderr output appears in the 'error' field of the service response."""
@@ -169,4 +174,4 @@ class TestServices:
             },
         )
         assert resp.status_code == 200, resp.text
-        assert "err_msg" in resp.json()["error"]
+        assert "err_msg" in svc_data(resp)["error"]

@@ -16,14 +16,21 @@ services:
     restart: unless-stopped
 
   # ── SSH test servers ────────────────────────────────────────────────────────
-  # A single Ubuntu-based container runs two sshd daemons on ports 2222 and
-  # 2223, providing the two "distinct" servers referenced by the Playwright
-  # fixtures.  Credentials: user=foo  password=pass
-  ssh_docker_test:
+  # Two identical Ubuntu-based containers each run a single sshd on port 22
+  # (the SSH default).  The Home Assistant integration connects to port 22 by
+  # default, so no port mapping is required.
+  # Credentials: user=foo  password=pass
+  ssh_docker_test_1:
     build:
       context: tests/playwright
       dockerfile: Dockerfile.ssh
-    container_name: ssh_docker_test
+    container_name: ssh_docker_test_1
+
+  ssh_docker_test_2:
+    build:
+      context: tests/playwright
+      dockerfile: Dockerfile.ssh
+    container_name: ssh_docker_test_2
 
   # ── Playwright E2E test runner ──────────────────────────────────────────────
   # Not started by default (`docker compose up`); invoke explicitly:
@@ -34,9 +41,8 @@ services:
       dockerfile: tests/playwright/Dockerfile
     environment:
       - HOMEASSISTANT_URL=http://homeassistant:8123
-      - SSH_HOST=ssh_docker_test
-      - SSH_PORT_1=2222
-      - SSH_PORT_2=2223
+      - SSH_HOST_1=ssh_docker_test_1
+      - SSH_HOST_2=ssh_docker_test_2
       - SSH_USER=foo
       - SSH_PASSWORD=pass
       - HA_USERNAME=admin
@@ -47,7 +53,9 @@ services:
       - ./playwright-results:/app/playwright-results
     depends_on:
       - homeassistant
-      - ssh_docker_test
+      - ssh_docker_test_1
+      - ssh_docker_test_2
 
 volumes:
   ha_config:
+

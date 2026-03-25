@@ -22,6 +22,11 @@ def execute(ha_api: requests.Session, payload: dict) -> requests.Response:
     )
 
 
+def svc_data(resp: requests.Response) -> dict:
+    """Extract the ssh_command service response dict from an HA API response."""
+    return resp.json().get("service_response", resp.json())
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -159,4 +164,4 @@ class TestSecurity:
             },
         )
         assert resp.status_code == 200, resp.text
-        assert "encrypted_conn_ok" in resp.json()["output"]
+        assert "encrypted_conn_ok" in svc_data(resp)["output"]
