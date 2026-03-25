@@ -31,14 +31,6 @@ header()  { echo -e "\n${BOLD}$*${NC}"; }
 
 command_exists() { command -v "$1" &>/dev/null; }
 
-os_type() {
-    case "$OSTYPE" in
-        linux*)  echo "linux" ;;
-        darwin*) echo "macos" ;;
-        *)       echo "unknown" ;;
-    esac
-}
-
 # ── Docker installation ───────────────────────────────────────────────────────
 install_docker() {
     if command_exists docker; then
@@ -47,27 +39,9 @@ install_docker() {
     fi
 
     header "Installing Docker…"
-    case "$(os_type)" in
-        linux)
-            curl -fsSL https://get.docker.com | sudo sh
-            sudo usermod -aG docker "$USER" || true
-            warn "Docker installed. You may need to run 'newgrp docker' or re-login for group membership to take effect."
-            ;;
-        macos)
-            if command_exists brew; then
-                brew install --cask docker
-                info "Please launch Docker Desktop to start the daemon, then re-run this script."
-                exit 0
-            else
-                error "Homebrew not found. Install Docker Desktop from https://www.docker.com/products/docker-desktop/ and re-run."
-                exit 1
-            fi
-            ;;
-        *)
-            error "Unsupported OS '$OSTYPE'. Install Docker manually from https://docs.docker.com/engine/install/ and re-run."
-            exit 1
-            ;;
-    esac
+    curl -fsSL https://get.docker.com | sudo sh
+    sudo usermod -aG docker "$USER" || true
+    warn "Docker installed. You may need to run 'newgrp docker' or re-login for group membership to take effect."
 }
 
 # ── act installation ──────────────────────────────────────────────────────────
@@ -78,24 +52,8 @@ install_act() {
     fi
 
     header "Installing act…"
-    case "$(os_type)" in
-        linux)
-            curl -fsSL https://raw.githubusercontent.com/nektos/act/master/install.sh \
-                | sudo bash -s -- -b /usr/local/bin
-            ;;
-        macos)
-            if command_exists brew; then
-                brew install act
-            else
-                curl -fsSL https://raw.githubusercontent.com/nektos/act/master/install.sh \
-                    | sudo bash -s -- -b /usr/local/bin
-            fi
-            ;;
-        *)
-            error "Unsupported OS '$OSTYPE'. Install act manually from https://github.com/nektos/act and re-run."
-            exit 1
-            ;;
-    esac
+    curl -fsSL https://raw.githubusercontent.com/nektos/act/master/install.sh \
+        | sudo bash -s -- -b /usr/local/bin
 }
 
 # ── Docker daemon check ───────────────────────────────────────────────────────
@@ -105,25 +63,12 @@ ensure_docker_running() {
     fi
 
     warn "Docker daemon is not running – attempting to start it…"
-    case "$(os_type)" in
-        linux)
-            if command_exists systemctl; then
-                sudo systemctl start docker
-            else
-                sudo service docker start
-            fi
-            sleep 3
-            ;;
-        macos)
-            open -a Docker || true
-            info "Waiting up to 60 seconds for Docker Desktop to start…"
-            local i
-            for i in $(seq 1 12); do
-                sleep 5
-                docker info &>/dev/null && return 0
-            done
-            ;;
-    esac
+    if command_exists systemctl; then
+        sudo systemctl start docker
+    else
+        sudo service docker start
+    fi
+    sleep 3
 
     if ! docker info &>/dev/null; then
         error "Docker daemon is still not running. Please start Docker manually and re-run this script."
