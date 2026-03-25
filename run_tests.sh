@@ -1,3 +1,3 @@
 #!/bin/bash
 
-coverage run --omit='test/*' -m unittest; coverage html
+coverage run --omit='tests/unit_tests/*' -m unittest discover -s tests/unit_tests; coverage html
