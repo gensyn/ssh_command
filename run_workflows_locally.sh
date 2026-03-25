@@ -34,7 +34,7 @@ command_exists() { command -v "$1" &>/dev/null; }
 # ── Docker installation ───────────────────────────────────────────────────────
 install_docker() {
     if command_exists docker; then
-        info "Docker is already installed: $(docker --version)"
+        info "Docker is already installed: $(sudo docker --version)"
         return 0
     fi
 
@@ -58,7 +58,7 @@ install_act() {
 
 # ── Docker daemon check ───────────────────────────────────────────────────────
 ensure_docker_running() {
-    if docker info &>/dev/null; then
+    if sudo docker info &>/dev/null; then
         return 0
     fi
 
@@ -70,7 +70,7 @@ ensure_docker_running() {
     fi
     sleep 3
 
-    if ! docker info &>/dev/null; then
+    if ! sudo docker info &>/dev/null; then
         error "Docker daemon is still not running. Please start Docker manually and re-run this script."
         exit 1
     fi
@@ -96,7 +96,7 @@ run_workflow() {
 
     info "Running [$name] with event '$event'…"
 
-    if act "$event" \
+    if sudo act "$event" \
         -W "$workflow_file" \
         -P "ubuntu-latest=$ACT_IMAGE" \
         --rm \
