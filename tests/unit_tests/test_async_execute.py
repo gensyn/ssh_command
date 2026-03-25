@@ -104,9 +104,8 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         service_call = self._make_service_call(SERVICE_DATA_BASE)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(KeyImportError("Invalid private key"))):
-            with patch("ssh_command.coordinator.exists", return_value=True):
-                with self.assertRaises(ServiceValidationError) as ctx:
-                    await self.handler(service_call)
+            with self.assertRaises(ServiceValidationError) as ctx:
+                await self.handler(service_call)
 
         self.assertEqual(ctx.exception.translation_key, "invalid_key_file")
 
