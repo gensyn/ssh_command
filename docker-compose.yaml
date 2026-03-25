@@ -1,0 +1,53 @@
+services:
+
+  # ── Home Assistant ──────────────────────────────────────────────────────────
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant_test
+    volumes:
+      # Persistent HA config (survives container restarts; start fresh with
+      # `docker compose down -v`).
+      - ha_config:/config
+      # Mount the integration source as a custom component so HA loads it on
+      # startup without any extra copy step.
+      - ./:/config/custom_components/ssh_command:ro
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+
+  # ── SSH test servers ────────────────────────────────────────────────────────
+  # A single Ubuntu-based container runs two sshd daemons on ports 2222 and
+  # 2223, providing the two "distinct" servers referenced by the Playwright
+  # fixtures.  Credentials: user=foo  password=pass
+  ssh_docker_test:
+    build:
+      context: tests/playwright
+      dockerfile: Dockerfile.ssh
+    container_name: ssh_docker_test
+
+  # ── Playwright E2E test runner ──────────────────────────────────────────────
+  # Not started by default (`docker compose up`); invoke explicitly:
+  #   docker compose run --rm playwright-tests
+  playwright-tests:
+    build:
+      context: .
+      dockerfile: tests/playwright/Dockerfile
+    environment:
+      - HOMEASSISTANT_URL=http://homeassistant:8123
+      - SSH_HOST=ssh_docker_test
+      - SSH_PORT_1=2222
+      - SSH_PORT_2=2223
+      - SSH_USER=foo
+      - SSH_PASSWORD=pass
+      - HA_USERNAME=admin
+      - HA_PASSWORD=admin
+    volumes:
+      # Test results (JUnit XML) written here are available on the host after
+      # the container exits, e.g. for CI artifact upload.
+      - ./playwright-results:/app/playwright-results
+    depends_on:
+      - homeassistant
+      - ssh_docker_test
+
+volumes:
+  ha_config:

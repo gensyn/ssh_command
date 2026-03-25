@@ -1,0 +1,46 @@
+# Minimal SSH test server with a single user (foo / pass).
+# Two sshd daemons run on port 2222 and port 2223 so the E2E tests can
+# exercise connections to two "distinct" servers from the same hostname.
+FROM ubuntu:24.04
+
+RUN apt-get update -qq && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
+        openssh-server \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create the test user
+RUN useradd -m -s /bin/sh foo && \
+    echo "foo:pass" | chpasswd
+
+# Write a shared base sshd config
+RUN printf '%s\n' \
+        'HostKey /etc/ssh/ssh_host_rsa_key' \
+        'HostKey /etc/ssh/ssh_host_ecdsa_key' \
+        'HostKey /etc/ssh/ssh_host_ed25519_key' \
+        'AuthorizedKeysFile .ssh/authorized_keys' \
+        'PasswordAuthentication yes' \
+        'KbdInteractiveAuthentication no' \
+        'UsePAM no' \
+        'PrintMotd no' \
+        'PrintLastLog no' \
+        'Subsystem sftp /usr/lib/openssh/sftp-server' \
+    > /etc/ssh/sshd_config.base
+
+# Create per-instance configs that differ only in their PidFile path
+RUN cp /etc/ssh/sshd_config.base /etc/ssh/sshd_config.2222 && \
+    echo 'PidFile /tmp/sshd-2222.pid' >> /etc/ssh/sshd_config.2222 && \
+    cp /etc/ssh/sshd_config.base /etc/ssh/sshd_config.2223 && \
+    echo 'PidFile /tmp/sshd-2223.pid' >> /etc/ssh/sshd_config.2223
+
+# Generate host keys and create the privilege-separation directory
+RUN ssh-keygen -A && mkdir -p /run/sshd
+
+EXPOSE 2222 2223
+
+# Start both daemons; `wait` keeps the shell alive until both exit.
+CMD ["/bin/sh", "-c", \
+    "/usr/sbin/sshd -p 2222 -f /etc/ssh/sshd_config.2222 -D & \
+     /usr/sbin/sshd -p 2223 -f /etc/ssh/sshd_config.2223 -D & \
+     wait"]
+
+
