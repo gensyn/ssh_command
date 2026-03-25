@@ -31,6 +31,13 @@ async def _validate_service_data(data: dict[str, Any]) -> None:
             translation_key="password_or_key_file_required",
         )
 
+    if has_password and has_key_file:
+        raise ServiceValidationError(
+            "Password and key file cannot both be provided.",
+            translation_domain=DOMAIN,
+            translation_key="password_and_key_file",
+        )
+
     has_command: bool = bool(data.get(CONF_COMMAND))
     has_input: bool = bool(data.get(CONF_INPUT))
 
