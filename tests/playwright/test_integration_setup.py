@@ -28,26 +28,16 @@ class TestIntegrationSetup:
 
     def test_add_integration_via_ui(self, page: Page) -> None:
         """Adding the SSH Command integration through the UI config flow works."""
-        # Step 1: load the integrations page first so the HA SPA boots and
-        # recognises the localStorage token.  Navigating directly to the
-        # add-integration deep-link on a cold context sometimes lands on
-        # onboarding.html before the auth token can take effect.
-        page.goto(f"{HA_URL}/config/integrations")
-        page.wait_for_load_state("networkidle")
-        assert "/config/integrations" in page.url, (
-            f"Failed to load integrations page: {page.url}"
-        )
-
-        # Step 2: navigate to the add-integration deep-link as an SPA
-        # navigation (auth state is already established from step 1).
+        # Navigate directly to the add-integration deep-link.  HA's canonical
+        # URL for adding a specific integration; the storage_state fixture
+        # pre-populates localStorage so auth is established before any
+        # navigation and the SPA never redirects to /onboarding.html.
         page.goto(f"{HA_URL}/config/integrations/add?domain=ssh_command")
         page.wait_for_load_state("networkidle")
-
-        # Wait for either a success/abort dialog or redirection back to the
-        # integrations dashboard — both indicate the config flow completed.
         page.wait_for_timeout(2000)
-        # Acceptable outcomes: back on /config/integrations (success or abort)
-        # or a dialog is open.  Either way HA processed the flow.
+
+        # Acceptable outcomes: back on /config/integrations (success/abort)
+        # or a ha-dialog is open.  Either way HA processed the flow.
         assert (
             "/config/integrations" in page.url
             or page.locator("ha-dialog").count() > 0

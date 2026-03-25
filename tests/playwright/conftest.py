@@ -172,30 +172,36 @@ def ha_token() -> str:
 
 @pytest.fixture()
 def context(browser: Browser, ha_token: str) -> Generator[BrowserContext, None, None]:
-    """Provide an authenticated browser context for Home Assistant."""
+    """Provide an authenticated browser context for Home Assistant.
+
+    The HA frontend reads ``hassTokens`` from ``localStorage`` to determine
+    whether the user is authenticated.  Using Playwright's ``storage_state``
+    pre-populates ``localStorage`` *before* the first navigation, which is
+    more reliable than ``add_init_script`` (the latter can lose a race with
+    HA's own auth-check code and cause a redirect to ``/onboarding.html``).
+    """
+    hass_tokens = json.dumps({
+        "access_token": ha_token,
+        "token_type": "Bearer",
+        "expires_in": 1800,
+        "hassUrl": HA_URL,
+        "clientId": f"{HA_URL}/",
+        "expires": int(time.time() * 1000) + 1_800_000,
+        "refresh_token": "",
+    })
     ctx = browser.new_context(
         base_url=HA_URL,
-        extra_http_headers={"Authorization": f"Bearer {ha_token}"},
-    )
-    # Inject the token into localStorage so the HA frontend recognises the session.
-    # Use json.dumps to safely escape all values before embedding in JS.
-    token_json = json.dumps(ha_token)
-    ha_url_json = json.dumps(HA_URL)
-    ctx.add_init_script(
-        f"""
-        window.localStorage.setItem(
-            'hassTokens',
-            JSON.stringify({{
-                access_token: {token_json},
-                token_type: 'Bearer',
-                expires_in: 1800,
-                hassUrl: {ha_url_json},
-                clientId: {ha_url_json},
-                expires: Date.now() + 1800000,
-                refresh_token: ''
-            }})
-        );
-        """
+        storage_state={
+            "cookies": [],
+            "origins": [
+                {
+                    "origin": HA_URL,
+                    "localStorage": [
+                        {"name": "hassTokens", "value": hass_tokens},
+                    ],
+                }
+            ],
+        },
     )
     yield ctx
     ctx.close()
