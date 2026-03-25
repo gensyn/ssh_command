@@ -7,8 +7,14 @@
 # Both tools are installed automatically if they are not already present.
 #
 # Usage:
-#   ./run_workflows_locally.sh [--include-release]
+#   ./run_workflows_locally.sh [--include-hassfest] [--include-validate] [--include-release]
 #
+#   --include-hassfest  Also run hassfest.yaml (may fail locally because act sets
+#                       GITHUB_WORKSPACE to the host path, causing hassfest's
+#                       directory-name check to fail).
+#   --include-validate  Also run validate.yaml (HACS validation fetches data from
+#                       the live GitHub repository and may not behave identically
+#                       when run locally via act).
 #   --include-release   Also run release.yaml (requires a GITHUB_TOKEN env var
 #                       with write permissions to the repository and will upload
 #                       artefacts to the real GitHub release – use with care).
@@ -110,7 +116,9 @@ run_workflow() {
 }
 
 run_all_workflows() {
-    local include_release="${1:-false}"
+    local include_hassfest="${1:-false}"
+    local include_validate="${2:-false}"
+    local include_release="${3:-false}"
 
     # List of workflows and the event used to trigger each one locally.
     # Parallel arrays: workflow_files[i] uses workflow_events[i].
@@ -118,20 +126,35 @@ run_all_workflows() {
         "test.yml"
         "pylint.yml"
         "integration-tests.yml"
-        "hassfest.yaml"
-        "validate.yaml"
     )
     local workflow_events=(
         "push"
         "push"
         "push"
-        "push"
-        "workflow_dispatch"
     )
 
     local passed=()
     local failed=()
     local skipped=()
+
+    # hassfest: skipped by default because act sets GITHUB_WORKSPACE to the
+    # host filesystem path, which causes hassfest's directory-name check to
+    # fail even though the integration is valid (works fine on GitHub).
+    if [[ "$include_hassfest" == "true" ]]; then
+        workflow_files+=("hassfest.yaml")
+        workflow_events+=("push")
+    else
+        skipped+=("hassfest.yaml (skipped by default – pass --include-hassfest to run it)")
+    fi
+
+    # validate (HACS): skipped by default because it fetches live data from
+    # the GitHub repository and may not behave identically when run locally.
+    if [[ "$include_validate" == "true" ]]; then
+        workflow_files+=("validate.yaml")
+        workflow_events+=("workflow_dispatch")
+    else
+        skipped+=("validate.yaml (skipped by default – pass --include-validate to run it)")
+    fi
 
     # Optionally include the release workflow
     if [[ "$include_release" == "true" ]]; then
@@ -183,14 +206,18 @@ run_all_workflows() {
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 main() {
+    local include_hassfest="false"
+    local include_validate="false"
     local include_release="false"
 
     for arg in "$@"; do
         case "$arg" in
-            --include-release) include_release="true" ;;
+            --include-hassfest) include_hassfest="true" ;;
+            --include-validate) include_validate="true" ;;
+            --include-release)  include_release="true" ;;
             *)
                 error "Unknown argument: $arg"
-                echo "Usage: $0 [--include-release]"
+                echo "Usage: $0 [--include-hassfest] [--include-validate] [--include-release]"
                 exit 1
                 ;;
         esac
@@ -203,7 +230,7 @@ main() {
     install_docker
     install_act
     ensure_docker_running
-    run_all_workflows "$include_release"
+    run_all_workflows "$include_hassfest" "$include_validate" "$include_release"
 }
 
 main "$@"
