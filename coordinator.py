@@ -15,7 +15,7 @@ import socket
 from pathlib import Path
 from typing import Any
 
-from asyncssh import HostKeyNotVerifiable, PermissionDenied, connect, read_known_hosts
+from asyncssh import HostKeyNotVerifiable, KeyImportError, PermissionDenied, connect, read_known_hosts
 
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, CONF_HOST, CONF_COMMAND, CONF_TIMEOUT
 from homeassistant.core import HomeAssistant
@@ -91,6 +91,13 @@ class SshCommandCoordinator:
                 "The host key could not be verified.",
                 translation_domain=DOMAIN,
                 translation_key="host_key_not_verifiable",
+            ) from exc
+        except KeyImportError as exc:
+            _LOGGER.warning("Invalid key file for %s@%s: %s", username, host, exc)
+            raise ServiceValidationError(
+                "The key file is not a valid private key.",
+                translation_domain=DOMAIN,
+                translation_key="invalid_key_file",
             ) from exc
         except PermissionDenied as exc:
             _LOGGER.warning("SSH login failed for %s@%s: %s", username, host, exc)

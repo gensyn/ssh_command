@@ -12,7 +12,7 @@ sys.path.insert(0, absolute_mock_path)
 absolute_plugin_path = str(Path(__file__).parent.parent.parent.parent.absolute())
 sys.path.insert(0, absolute_plugin_path)
 
-from asyncssh import HostKeyNotVerifiable, PermissionDenied
+from asyncssh import HostKeyNotVerifiable, KeyImportError, PermissionDenied
 
 from homeassistant.exceptions import ServiceValidationError
 
@@ -99,6 +99,15 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
                 await self.handler(service_call)
 
         self.assertEqual(ctx.exception.translation_key, "host_key_not_verifiable")
+
+    async def test_invalid_key_file(self):
+        service_call = self._make_service_call(SERVICE_DATA_BASE)
+
+        with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(KeyImportError("Invalid private key"))):
+            with self.assertRaises(ServiceValidationError) as ctx:
+                await self.handler(service_call)
+
+        self.assertEqual(ctx.exception.translation_key, "invalid_key_file")
 
     async def test_permission_denied(self):
         service_call = self._make_service_call(SERVICE_DATA_BASE)
