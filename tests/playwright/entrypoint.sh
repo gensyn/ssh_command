@@ -92,8 +92,8 @@ PYEOF
         )
 
         if [[ -n "${AUTH_TOKEN}" ]]; then
-            # Step 3: Complete remaining onboarding steps with the new token
-            for STEP in core_config analytics integration; do
+            # Step 3a: Complete core_config and analytics steps (require auth, accept {})
+            for STEP in core_config analytics; do
                 log "  Completing onboarding step: ${STEP} …"
                 curl -sf -X POST "${HA_URL}/api/onboarding/${STEP}" \
                     -H "Authorization: Bearer ${AUTH_TOKEN}" \
@@ -101,6 +101,18 @@ PYEOF
                     -d '{}' > /dev/null 2>&1 || \
                     log "  WARNING: step '${STEP}' returned an error (may be harmless)."
             done
+
+            # Step 3b: Complete the integration step.
+            # This endpoint has requires_auth=False in HA and requires client_id +
+            # redirect_uri.  Posting '{}' fails schema validation (422) and leaves
+            # the step incomplete, causing the HA SPA to redirect to /onboarding.html
+            # even when a valid token is present in localStorage.
+            log "  Completing onboarding step: integration …"
+            curl -sf -X POST "${HA_URL}/api/onboarding/integration" \
+                -H "Content-Type: application/json" \
+                -d "{\"client_id\":\"${HA_URL}/\",\"redirect_uri\":\"${HA_URL}/\"}" \
+                > /dev/null 2>&1 || \
+                log "  WARNING: step 'integration' returned an error (may not be required in this HA version)."
         fi
     fi
 

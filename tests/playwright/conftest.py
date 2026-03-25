@@ -102,14 +102,17 @@ def get_ha_token() -> str:
 
 
 def wait_for_ha(timeout: int = 300) -> None:
-    """Block until Home Assistant is fully started and accepts API requests.
+    """Block until Home Assistant is fully started and onboarding is complete.
 
-    Polls GET /api/onboarding which requires no authentication and therefore
-    cannot trigger HA's IP-ban mechanism.  The endpoint returns HTTP 200 even
-    during onboarding, so it is safe to use as a startup indicator.
+    Phase 1: polls GET /api/onboarding until HA responds.  This endpoint
+    requires no authentication and cannot trigger HA's IP-ban mechanism.
 
-    A second pass waits for the integration to be loadable (the custom
-    component may still be installing its requirements).
+    Phase 2: waits until ALL onboarding steps are marked ``done``.  HA's SPA
+    redirects to /onboarding.html when any step is still pending, even when a
+    valid access token is present in localStorage.
+
+    Phase 3: a short fixed delay lets HA finish loading custom components and
+    installing their requirements (asyncssh etc.) after onboarding completes.
     """
     deadline = time.time() + timeout
 
@@ -125,9 +128,31 @@ def wait_for_ha(timeout: int = 300) -> None:
     else:
         raise RuntimeError(f"Home Assistant did not become ready within {timeout}s")
 
-    # Phase 2: wait for the config-entries API to be usable (integrations loaded)
-    # We use a small fixed delay to let HA finish loading custom components and
-    # installing their requirements (asyncssh etc.) after the web server is up.
+    # Phase 2: wait for all onboarding steps to be done.
+    # HA's SPA fetches /api/onboarding on load; if any step is still pending it
+    # redirects to /onboarding.html regardless of the localStorage token.
+    while time.time() < deadline:
+        try:
+            resp = requests.get(f"{HA_URL}/api/onboarding", timeout=5)
+            if resp.status_code == 200:
+                steps = resp.json()
+                if isinstance(steps, list) and steps and all(
+                    s.get("done") for s in steps
+                ):
+                    break
+        except requests.RequestException:
+            pass
+        time.sleep(3)
+    else:
+        try:
+            state = requests.get(f"{HA_URL}/api/onboarding", timeout=5).json()
+        except Exception:  # noqa: BLE001
+            state = "unavailable"
+        raise RuntimeError(
+            f"HA onboarding not complete within {timeout}s — pending steps: {state}"
+        )
+
+    # Phase 3: short settle delay after onboarding
     time.sleep(15)
 
 
