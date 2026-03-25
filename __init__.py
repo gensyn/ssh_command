@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import voluptuous as vol
-from aiofiles.ospath import exists
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, CONF_HOST, CONF_COMMAND, CONF_TIMEOUT
@@ -20,7 +20,7 @@ from .coordinator import SshCommandCoordinator
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)  # pylint: disable=invalid-name
 
 
-async def _validate_service_data(data: dict[str, Any]) -> None:
+async def _validate_service_data(hass: HomeAssistant, data: dict[str, Any]) -> None:
     has_password: bool = bool(data.get(CONF_PASSWORD))
     has_key_file: bool = bool(data.get(CONF_KEY_FILE))
 
@@ -48,7 +48,7 @@ async def _validate_service_data(data: dict[str, Any]) -> None:
             translation_key="command_or_input",
         )
 
-    if has_key_file and not await exists(data[CONF_KEY_FILE]):
+    if has_key_file and not await hass.async_add_executor_job(Path(data[CONF_KEY_FILE]).exists):
         raise ServiceValidationError(
             "Could not find key file.",
             translation_domain=DOMAIN,
@@ -87,7 +87,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     async def async_execute(service_call: ServiceCall) -> ServiceResponse:
-        await _validate_service_data(service_call.data)
+        await _validate_service_data(hass, service_call.data)
         # ssh_command is a single-instance integration (enforced by single_instance_allowed
         # in the config flow), so there is at most one coordinator in hass.data[DOMAIN].
         coordinator = next(iter(hass.data.get(DOMAIN, {}).values()), None)

@@ -15,9 +15,7 @@ import socket
 from pathlib import Path
 from typing import Any
 
-from aiofiles import open as aioopen
-from aiofiles.ospath import exists
-from asyncssh import HostKeyNotVerifiable, PermissionDenied, connect, read_known_hosts
+from asyncssh import HostKeyNotVerifiable, KeyImportError, PermissionDenied, connect, read_known_hosts
 
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, CONF_HOST, CONF_COMMAND, CONF_TIMEOUT
 from homeassistant.core import HomeAssistant
@@ -64,9 +62,8 @@ class SshCommandCoordinator:
         timeout = data.get(CONF_TIMEOUT, CONST_DEFAULT_TIMEOUT)
 
         if input_data:
-            if await exists(input_data):
-                async with aioopen(input_data, 'r') as sf:
-                    input_data = await sf.read()
+            if await self.hass.async_add_executor_job(Path(input_data).exists):
+                input_data = await self.hass.async_add_executor_job(Path(input_data).read_text)
 
         conn_kwargs = {
             CONF_HOST: host,
@@ -94,6 +91,13 @@ class SshCommandCoordinator:
                 "The host key could not be verified.",
                 translation_domain=DOMAIN,
                 translation_key="host_key_not_verifiable",
+            ) from exc
+        except KeyImportError as exc:
+            _LOGGER.warning("Invalid key file for %s@%s: %s", username, host, exc)
+            raise ServiceValidationError(
+                "The key file is not a valid private key.",
+                translation_domain=DOMAIN,
+                translation_key="invalid_key_file",
             ) from exc
         except PermissionDenied as exc:
             _LOGGER.warning("SSH login failed for %s@%s: %s", username, host, exc)
@@ -131,6 +135,6 @@ class SshCommandCoordinator:
             return None
         if not known_hosts:
             known_hosts = str(Path("~", ".ssh", "known_hosts").expanduser())
-        if await exists(known_hosts):
+        if await self.hass.async_add_executor_job(Path(known_hosts).exists):
             return await self.hass.async_add_executor_job(read_known_hosts, known_hosts)
         return known_hosts

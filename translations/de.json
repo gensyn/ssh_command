@@ -58,6 +58,9 @@
     "key_file_not_found": {
       "message": "Konnte Schlüsseldatei nicht finden."
     },
+    "invalid_key_file": {
+      "message": "Die Schlüsseldatei ist kein gültiger privater Schlüssel."
+    },
     "known_hosts_with_check_disabled": {
       "message": "Bekannte Hosts wurden angegeben, obwohl die Überprüfung deaktiviert ist."
     },
