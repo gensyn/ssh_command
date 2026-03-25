@@ -225,7 +225,7 @@ class TestExecuteServiceSuccess:
         mock_conn = _make_mock_conn(stdout="hello\n", stderr="", exit_status=0)
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnect(mock_conn)):
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 result = await hass.services.async_call(
                     DOMAIN,
                     SERVICE_EXECUTE,
@@ -245,7 +245,7 @@ class TestExecuteServiceSuccess:
         mock_conn = _make_mock_conn(stdout="", stderr="some error", exit_status=1)
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnect(mock_conn)):
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 result = await hass.services.async_call(
                     DOMAIN,
                     SERVICE_EXECUTE,
@@ -265,7 +265,7 @@ class TestExecuteServiceSuccess:
         data = {**SERVICE_DATA_BASE, "password": "mysecret"}
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnect(mock_conn)) as mock_connect:
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 await hass.services.async_call(
                     DOMAIN,
                     SERVICE_EXECUTE,
@@ -291,15 +291,14 @@ class TestExecuteServiceSuccess:
         }
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnect(mock_conn)) as mock_connect:
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=True):
-                with patch("custom_components.ssh_command.exists", return_value=True):
-                    await hass.services.async_call(
-                        DOMAIN,
-                        SERVICE_EXECUTE,
-                        data,
-                        blocking=True,
-                        return_response=True,
-                    )
+            with patch("pathlib.Path.exists", return_value=True):
+                await hass.services.async_call(
+                    DOMAIN,
+                    SERVICE_EXECUTE,
+                    data,
+                    blocking=True,
+                    return_response=True,
+                )
 
         call_kwargs = mock_connect.call_args[1]
         assert call_kwargs["client_keys"] == "/home/user/.ssh/id_rsa"
@@ -312,7 +311,7 @@ class TestExecuteServiceSuccess:
         data = {**SERVICE_DATA_BASE, "input": "inline input"}
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnect(mock_conn)):
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 await hass.services.async_call(
                     DOMAIN,
                     SERVICE_EXECUTE,
@@ -337,7 +336,7 @@ class TestExecuteServiceSuccess:
             data = {**SERVICE_DATA_BASE, "command": "cat", "input": tf_path}
             with patch("custom_components.ssh_command.coordinator.connect",
                        return_value=_MockConnect(mock_conn)):
-                with patch("custom_components.ssh_command.coordinator.exists", return_value=True):
+                with patch("pathlib.Path.exists", return_value=True):
                     await hass.services.async_call(
                         DOMAIN,
                         SERVICE_EXECUTE,
@@ -359,7 +358,7 @@ class TestExecuteServiceSuccess:
         data = {**SERVICE_DATA_BASE, "timeout": 60}
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnect(mock_conn)):
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 await hass.services.async_call(
                     DOMAIN,
                     SERVICE_EXECUTE,
@@ -387,7 +386,7 @@ class TestExecuteServiceKnownHosts:
         mock_conn = _make_mock_conn()
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnect(mock_conn)) as mock_connect:
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 await hass.services.async_call(
                     DOMAIN,
                     SERVICE_EXECUTE,
@@ -412,7 +411,7 @@ class TestExecuteServiceKnownHosts:
         }
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnect(mock_conn)) as mock_connect:
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=True):
+            with patch("pathlib.Path.exists", return_value=True):
                 with patch("custom_components.ssh_command.coordinator.read_known_hosts",
                            return_value=mock_known_hosts) as mock_rkh:
                     await hass.services.async_call(
@@ -440,7 +439,7 @@ class TestExecuteServiceKnownHosts:
         }
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnect(mock_conn)) as mock_connect:
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 await hass.services.async_call(
                     DOMAIN,
                     SERVICE_EXECUTE,
@@ -463,7 +462,7 @@ class TestExecuteServiceKnownHosts:
         data = {**SERVICE_DATA_BASE, "check_known_hosts": True}
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnect(mock_conn)) as mock_connect:
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 await hass.services.async_call(
                     DOMAIN,
                     SERVICE_EXECUTE,
@@ -521,7 +520,7 @@ class TestExecuteServiceValidation:
         entry = _make_entry()
         await _setup_entry(hass, entry)
 
-        with patch("custom_components.ssh_command.exists", return_value=False):
+        with patch("pathlib.Path.exists", return_value=False):
             with pytest.raises(ServiceValidationError) as exc_info:
                 await hass.services.async_call(
                     DOMAIN,
@@ -592,7 +591,7 @@ class TestExecuteServiceErrors:
 
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnectRaises(HostKeyNotVerifiable("test"))):
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 with pytest.raises(ServiceValidationError) as exc_info:
                     await hass.services.async_call(
                         DOMAIN,
@@ -610,7 +609,7 @@ class TestExecuteServiceErrors:
 
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnectRaises(PermissionDenied("auth failed"))):
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 with pytest.raises(ServiceValidationError) as exc_info:
                     await hass.services.async_call(
                         DOMAIN,
@@ -628,7 +627,7 @@ class TestExecuteServiceErrors:
 
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnectRaises(TimeoutError())):
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 with pytest.raises(ServiceValidationError) as exc_info:
                     await hass.services.async_call(
                         DOMAIN,
@@ -647,7 +646,7 @@ class TestExecuteServiceErrors:
 
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnectRaises(err)):
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 with pytest.raises(ServiceValidationError) as exc_info:
                     await hass.services.async_call(
                         DOMAIN,
@@ -666,7 +665,7 @@ class TestExecuteServiceErrors:
 
         with patch("custom_components.ssh_command.coordinator.connect",
                    return_value=_MockConnectRaises(err)):
-            with patch("custom_components.ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 with pytest.raises(OSError):
                     await hass.services.async_call(
                         DOMAIN,
