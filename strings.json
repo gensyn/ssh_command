@@ -53,6 +53,9 @@
     "password_or_key_file_required": {
       "message": "Either password or key file must be provided."
     },
+    "password_and_key_file": {
+      "message": "Password and key file cannot both be provided."
+    },
     "command_or_input": {
       "message": "Either command or input must be provided."
     },

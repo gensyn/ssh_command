@@ -49,6 +49,9 @@
     "password_or_key_file_required": {
       "message": "Entweder Passwort oder Schlüsseldatei muss angegeben werden."
     },
+    "password_and_key_file": {
+      "message": "Passwort und Schlüsseldatei können nicht gleichzeitig angegeben werden."
+    },
     "command_or_input": {
       "message": "Entweder Befehl oder Eingabe muss angegeben werden."
     },
