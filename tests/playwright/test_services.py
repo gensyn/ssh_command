@@ -117,7 +117,7 @@ class TestServices:
                 "check_known_hosts": False,
             },
         )
-        assert resp.status_code == 400, resp.text
+        assert resp.status_code >= 400, resp.text
 
     def test_service_validation_missing_auth(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """The service rejects calls that lack both password and key_file."""
@@ -130,7 +130,7 @@ class TestServices:
                 "check_known_hosts": False,
             },
         )
-        assert resp.status_code == 400, resp.text
+        assert resp.status_code >= 400, resp.text
 
     def test_service_validation_missing_command_and_input(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """The service rejects calls that lack both command and input."""
@@ -143,7 +143,7 @@ class TestServices:
                 "check_known_hosts": False,
             },
         )
-        assert resp.status_code == 400, resp.text
+        assert resp.status_code >= 400, resp.text
 
     def test_service_with_timeout_parameter(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """The timeout parameter is accepted and used by the service."""

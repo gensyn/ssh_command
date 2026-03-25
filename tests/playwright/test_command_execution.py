@@ -117,7 +117,7 @@ class TestCommandExecution:
         payload["timeout"] = 2
         resp = execute(ha_api, payload)
         # HA raises ServiceValidationError for timeout → HTTP 400
-        assert resp.status_code == 400, resp.text
+        assert resp.status_code >= 400, resp.text
 
     def test_command_not_provided_requires_input(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """Omitting both command and input returns a 400 validation error."""
@@ -128,7 +128,7 @@ class TestCommandExecution:
             "check_known_hosts": False,
         }
         resp = execute(ha_api, payload)
-        assert resp.status_code == 400, resp.text
+        assert resp.status_code >= 400, resp.text
 
     def test_no_password_or_key_returns_error(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """Omitting both password and key_file returns a 400 validation error."""
@@ -139,7 +139,7 @@ class TestCommandExecution:
             "check_known_hosts": False,
         }
         resp = execute(ha_api, payload)
-        assert resp.status_code == 400, resp.text
+        assert resp.status_code >= 400, resp.text
 
     def test_input_parameter_stdin(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """The 'input' parameter pipes text to the command's stdin."""

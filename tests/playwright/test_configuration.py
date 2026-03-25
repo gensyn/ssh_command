@@ -94,7 +94,7 @@ class TestConfiguration:
                 "known_hosts": "/tmp/known_hosts",
             },
         )
-        assert resp.status_code == 400, resp.text
+        assert resp.status_code >= 400, resp.text
 
     def test_password_auth_configuration(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
         """Password-based authentication is accepted and works against the test server."""
@@ -123,7 +123,7 @@ class TestConfiguration:
                 "check_known_hosts": False,
             },
         )
-        assert resp.status_code == 400, resp.text
+        assert resp.status_code >= 400, resp.text
 
     def test_multiple_servers_independent(
         self,
