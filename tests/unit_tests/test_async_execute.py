@@ -85,8 +85,7 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         service_call = self._make_service_call(SERVICE_DATA_BASE)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnect(mock_conn)):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                result = await self.handler(service_call)
+            result = await self.handler(service_call)
 
         self.assertEqual(result[CONF_OUTPUT], "hello\n")
         self.assertEqual(result[CONF_ERROR], "")
@@ -96,9 +95,8 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         service_call = self._make_service_call(SERVICE_DATA_BASE)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(HostKeyNotVerifiable("test"))):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                with self.assertRaises(ServiceValidationError) as ctx:
-                    await self.handler(service_call)
+            with self.assertRaises(ServiceValidationError) as ctx:
+                await self.handler(service_call)
 
         self.assertEqual(ctx.exception.translation_key, "host_key_not_verifiable")
 
@@ -106,9 +104,8 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         service_call = self._make_service_call(SERVICE_DATA_BASE)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(PermissionDenied("auth failed"))):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                with self.assertRaises(ServiceValidationError) as ctx:
-                    await self.handler(service_call)
+            with self.assertRaises(ServiceValidationError) as ctx:
+                await self.handler(service_call)
 
         self.assertEqual(ctx.exception.translation_key, "login_failed")
 
@@ -116,9 +113,8 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         service_call = self._make_service_call(SERVICE_DATA_BASE)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(TimeoutError())):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                with self.assertRaises(ServiceValidationError) as ctx:
-                    await self.handler(service_call)
+            with self.assertRaises(ServiceValidationError) as ctx:
+                await self.handler(service_call)
 
         self.assertEqual(ctx.exception.translation_key, "connection_timed_out")
 
@@ -127,9 +123,8 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         service_call = self._make_service_call(SERVICE_DATA_BASE)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(err)):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                with self.assertRaises(ServiceValidationError) as ctx:
-                    await self.handler(service_call)
+            with self.assertRaises(ServiceValidationError) as ctx:
+                await self.handler(service_call)
 
         self.assertEqual(ctx.exception.translation_key, "host_not_reachable")
 
@@ -138,9 +133,8 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         service_call = self._make_service_call(SERVICE_DATA_BASE)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(err)):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                with self.assertRaises(OSError):
-                    await self.handler(service_call)
+            with self.assertRaises(OSError):
+                await self.handler(service_call)
 
     async def test_input_from_file(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tf:
@@ -153,8 +147,7 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
             service_call = self._make_service_call(data)
 
             with patch("ssh_command.coordinator.connect", return_value=_MockConnect(mock_conn)):
-                with patch("ssh_command.coordinator.exists", return_value=True):
-                    await self.handler(service_call)
+                await self.handler(service_call)
 
             call_kwargs = mock_conn.run.call_args[1]
             self.assertEqual(call_kwargs["input"], "file content\n")
@@ -167,8 +160,7 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         service_call = self._make_service_call(data)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnect(mock_conn)):
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                await self.handler(service_call)
+            await self.handler(service_call)
 
         call_kwargs = mock_conn.run.call_args[1]
         self.assertEqual(call_kwargs["input"], "inline input")
@@ -178,8 +170,7 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         service_call = self._make_service_call(SERVICE_DATA_BASE)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnect(mock_conn)) as mock_connect:
-            with patch("ssh_command.coordinator.exists", return_value=False):
-                await self.handler(service_call)
+            await self.handler(service_call)
 
         call_kwargs = mock_connect.call_args[1]
         self.assertIsNone(call_kwargs["known_hosts"])
@@ -191,7 +182,7 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         service_call = self._make_service_call(data)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnect(mock_conn)) as mock_connect:
-            with patch("ssh_command.coordinator.exists", return_value=True):
+            with patch("pathlib.Path.exists", return_value=True):
                 with patch("ssh_command.coordinator.read_known_hosts", return_value=mock_known_hosts) as mock_rkh:
                     await self.handler(service_call)
 
@@ -205,7 +196,7 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         service_call = self._make_service_call(data)
 
         with patch("ssh_command.coordinator.connect", return_value=_MockConnect(mock_conn)) as mock_connect:
-            with patch("ssh_command.coordinator.exists", return_value=False):
+            with patch("pathlib.Path.exists", return_value=False):
                 await self.handler(service_call)
 
         call_kwargs = mock_connect.call_args[1]
