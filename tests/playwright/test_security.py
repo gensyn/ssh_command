@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
 from typing import Any
+
 import requests
 
 from conftest import HA_URL
@@ -35,7 +35,8 @@ def svc_data(resp: requests.Response) -> dict:
 class TestSecurity:
     """Tests that validate the security properties of the SSH Command integration."""
 
-    def test_invalid_password_rejected(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_invalid_password_rejected(self, ha_api: requests.Session, ensure_integration: Any,
+                                       ssh_server_1: dict) -> None:
         """An incorrect password results in a 400 authentication error."""
         resp = execute(
             ha_api,
@@ -49,7 +50,8 @@ class TestSecurity:
         )
         assert resp.status_code >= 400, resp.text
 
-    def test_invalid_username_rejected(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_invalid_username_rejected(self, ha_api: requests.Session, ensure_integration: Any,
+                                       ssh_server_1: dict) -> None:
         """An incorrect username results in a 400 authentication error."""
         resp = execute(
             ha_api,
@@ -93,7 +95,8 @@ class TestSecurity:
         )
         assert resp.status_code >= 400, resp.text
 
-    def test_nonexistent_key_file_rejected(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_nonexistent_key_file_rejected(self, ha_api: requests.Session, ensure_integration: Any,
+                                           ssh_server_1: dict) -> None:
         """Referencing a key file that does not exist results in a validation error."""
         resp = execute(
             ha_api,
@@ -122,7 +125,8 @@ class TestSecurity:
         )
         assert resp.status_code == 401, resp.text
 
-    def test_known_hosts_conflict_rejected(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_known_hosts_conflict_rejected(self, ha_api: requests.Session, ensure_integration: Any,
+                                           ssh_server_1: dict) -> None:
         """Supplying known_hosts with check_known_hosts=False is rejected."""
         resp = execute(
             ha_api,
@@ -137,7 +141,8 @@ class TestSecurity:
         )
         assert resp.status_code >= 400, resp.text
 
-    def test_no_credentials_rejected(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_no_credentials_rejected(self, ha_api: requests.Session, ensure_integration: Any,
+                                     ssh_server_1: dict) -> None:
         """A service call that omits both password and key_file is rejected."""
         resp = execute(
             ha_api,
@@ -150,7 +155,8 @@ class TestSecurity:
         )
         assert resp.status_code >= 400, resp.text
 
-    def test_successful_auth_uses_encrypted_connection(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_successful_auth_uses_encrypted_connection(self, ha_api: requests.Session, ensure_integration: Any,
+                                                       ssh_server_1: dict) -> None:
         """A successful SSH command is executed (implying an encrypted SSH session)."""
         # asyncssh always uses encrypted connections; we verify the round-trip succeeds.
         resp = execute(

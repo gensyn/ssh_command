@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
 from typing import Any
+
 import requests
 
 from conftest import HA_URL
@@ -49,7 +49,8 @@ class TestServices:
         assert ssh_services is not None
         assert "execute" in ssh_services.get("services", {})
 
-    def test_service_returns_response(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_service_returns_response(self, ha_api: requests.Session, ensure_integration: Any,
+                                      ssh_server_1: dict) -> None:
         """The service returns a structured response with output/error/exit_status."""
         resp = call_service(
             ha_api,
@@ -82,7 +83,8 @@ class TestServices:
         assert resp.status_code == 200, resp.text
         assert "service_output_check" in svc_data(resp)["output"]
 
-    def test_service_with_exit_status_error(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_service_with_exit_status_error(self, ha_api: requests.Session, ensure_integration: Any,
+                                            ssh_server_1: dict) -> None:
         """A command that exits with a non-zero code is still returned as 200 with the exit code."""
         resp = call_service(
             ha_api,
@@ -119,7 +121,8 @@ class TestServices:
         )
         assert resp.status_code >= 400, resp.text
 
-    def test_service_validation_missing_auth(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_service_validation_missing_auth(self, ha_api: requests.Session, ensure_integration: Any,
+                                             ssh_server_1: dict) -> None:
         """The service rejects calls that lack both password and key_file."""
         resp = call_service(
             ha_api,
@@ -132,7 +135,8 @@ class TestServices:
         )
         assert resp.status_code >= 400, resp.text
 
-    def test_service_validation_missing_command_and_input(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_service_validation_missing_command_and_input(self, ha_api: requests.Session, ensure_integration: Any,
+                                                          ssh_server_1: dict) -> None:
         """The service rejects calls that lack both command and input."""
         resp = call_service(
             ha_api,
@@ -145,7 +149,8 @@ class TestServices:
         )
         assert resp.status_code >= 400, resp.text
 
-    def test_service_with_timeout_parameter(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_service_with_timeout_parameter(self, ha_api: requests.Session, ensure_integration: Any,
+                                            ssh_server_1: dict) -> None:
         """The timeout parameter is accepted and used by the service."""
         resp = call_service(
             ha_api,
@@ -161,7 +166,8 @@ class TestServices:
         assert resp.status_code == 200, resp.text
         assert "timeout_test" in svc_data(resp)["output"]
 
-    def test_service_stderr_in_response(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_service_stderr_in_response(self, ha_api: requests.Session, ensure_integration: Any,
+                                        ssh_server_1: dict) -> None:
         """Stderr output appears in the 'error' field of the service response."""
         resp = call_service(
             ha_api,

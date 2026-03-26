@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
 from typing import Any
+
 from playwright.sync_api import Page, expect
 
 from conftest import HA_URL

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
 from typing import Any
+
 import requests
 
 from conftest import HA_URL
@@ -71,7 +71,8 @@ class TestCommandExecution:
         assert data.get("output", "").strip() != ""
         assert data.get("exit_status") == 0
 
-    def test_command_stdout_captured(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_command_stdout_captured(self, ha_api: requests.Session, ensure_integration: Any,
+                                     ssh_server_1: dict) -> None:
         """Multiline output is fully captured."""
         resp = execute(ha_api, base_payload(ssh_server_1, "printf 'line1\\nline2\\nline3\\n'"))
         assert resp.status_code == 200, resp.text
@@ -80,7 +81,8 @@ class TestCommandExecution:
         assert "line2" in output
         assert "line3" in output
 
-    def test_command_stderr_captured(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_command_stderr_captured(self, ha_api: requests.Session, ensure_integration: Any,
+                                     ssh_server_1: dict) -> None:
         """Output written to stderr is captured in the 'error' field."""
         resp = execute(ha_api, base_payload(ssh_server_1, "echo error_message >&2"))
         assert resp.status_code == 200, resp.text
@@ -99,7 +101,8 @@ class TestCommandExecution:
         assert resp.status_code == 200, resp.text
         assert svc_data(resp).get("exit_status") == 0
 
-    def test_command_with_env_variable(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_command_with_env_variable(self, ha_api: requests.Session, ensure_integration: Any,
+                                       ssh_server_1: dict) -> None:
         """Environment variable expansion works inside commands."""
         resp = execute(ha_api, base_payload(ssh_server_1, "echo $HOME"))
         assert resp.status_code == 200, resp.text
@@ -111,7 +114,8 @@ class TestCommandExecution:
         assert resp.status_code == 200, resp.text
         assert "server2" in svc_data(resp).get("output", "")
 
-    def test_command_timeout_handling(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_command_timeout_handling(self, ha_api: requests.Session, ensure_integration: Any,
+                                      ssh_server_1: dict) -> None:
         """A command that exceeds the timeout returns a 400 error."""
         payload = base_payload(ssh_server_1, "sleep 60")
         payload["timeout"] = 2
@@ -119,7 +123,8 @@ class TestCommandExecution:
         # HA raises ServiceValidationError for timeout → HTTP 400
         assert resp.status_code >= 400, resp.text
 
-    def test_command_not_provided_requires_input(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_command_not_provided_requires_input(self, ha_api: requests.Session, ensure_integration: Any,
+                                                 ssh_server_1: dict) -> None:
         """Omitting both command and input returns a 400 validation error."""
         payload = {
             "host": ssh_server_1["host"],
@@ -130,7 +135,8 @@ class TestCommandExecution:
         resp = execute(ha_api, payload)
         assert resp.status_code >= 400, resp.text
 
-    def test_no_password_or_key_returns_error(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_no_password_or_key_returns_error(self, ha_api: requests.Session, ensure_integration: Any,
+                                              ssh_server_1: dict) -> None:
         """Omitting both password and key_file returns a 400 validation error."""
         payload = {
             "host": ssh_server_1["host"],
@@ -150,7 +156,8 @@ class TestCommandExecution:
         assert resp.status_code == 200, resp.text
         assert "hello from stdin" in svc_data(resp)["output"]
 
-    def test_all_optional_parameters(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_all_optional_parameters(self, ha_api: requests.Session, ensure_integration: Any,
+                                     ssh_server_1: dict) -> None:
         """Supplying every optional parameter in a single call works correctly."""
         resp = execute(
             ha_api,

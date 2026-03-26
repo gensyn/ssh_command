@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
 from typing import Any
+
 import requests
 
 from conftest import HA_URL, SSH_KEY_FILE, SSH_KNOWN_HOSTS
@@ -35,7 +35,8 @@ def svc_data(resp: requests.Response) -> dict:
 class TestConfiguration:
     """Tests covering configuration options of the SSH Command integration."""
 
-    def test_default_timeout_accepted(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_default_timeout_accepted(self, ha_api: requests.Session, ensure_integration: Any,
+                                      ssh_server_1: dict) -> None:
         """Omitting the timeout field uses the default (30 s) and the call succeeds."""
         resp = execute(
             ha_api,
@@ -50,7 +51,8 @@ class TestConfiguration:
         assert resp.status_code == 200, resp.text
         assert "default_timeout" in svc_data(resp)["output"]
 
-    def test_custom_timeout_accepted(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_custom_timeout_accepted(self, ha_api: requests.Session, ensure_integration: Any,
+                                     ssh_server_1: dict) -> None:
         """An explicit timeout value is accepted by the service schema."""
         resp = execute(
             ha_api,
@@ -66,7 +68,8 @@ class TestConfiguration:
         assert resp.status_code == 200, resp.text
         assert "custom_timeout" in svc_data(resp)["output"]
 
-    def test_check_known_hosts_false(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_check_known_hosts_false(self, ha_api: requests.Session, ensure_integration: Any,
+                                     ssh_server_1: dict) -> None:
         """Setting check_known_hosts=False bypasses host verification."""
         resp = execute(
             ha_api,
@@ -81,7 +84,8 @@ class TestConfiguration:
         assert resp.status_code == 200, resp.text
         assert "no_host_check" in svc_data(resp)["output"]
 
-    def test_known_hosts_with_check_disabled_rejected(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_known_hosts_with_check_disabled_rejected(self, ha_api: requests.Session, ensure_integration: Any,
+                                                      ssh_server_1: dict) -> None:
         """Providing known_hosts while check_known_hosts=False is a validation error."""
         resp = execute(
             ha_api,
@@ -96,7 +100,8 @@ class TestConfiguration:
         )
         assert resp.status_code >= 400, resp.text
 
-    def test_password_auth_configuration(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_password_auth_configuration(self, ha_api: requests.Session, ensure_integration: Any,
+                                         ssh_server_1: dict) -> None:
         """Password-based authentication is accepted and works against the test server."""
         resp = execute(
             ha_api,
@@ -111,7 +116,8 @@ class TestConfiguration:
         assert resp.status_code == 200, resp.text
         assert "password_auth" in svc_data(resp)["output"]
 
-    def test_key_file_not_found_rejected(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_key_file_not_found_rejected(self, ha_api: requests.Session, ensure_integration: Any,
+                                         ssh_server_1: dict) -> None:
         """Providing a non-existent key_file path results in a validation error."""
         resp = execute(
             ha_api,
@@ -126,11 +132,11 @@ class TestConfiguration:
         assert resp.status_code >= 400, resp.text
 
     def test_multiple_servers_independent(
-        self,
-        ha_api: requests.Session,
-        ensure_integration: Any,
-        ssh_server_1: dict,
-        ssh_server_2: dict,
+            self,
+            ha_api: requests.Session,
+            ensure_integration: Any,
+            ssh_server_1: dict,
+            ssh_server_2: dict,
     ) -> None:
         """Commands can be sent to two different SSH servers independently."""
         resp1 = execute(
@@ -158,7 +164,8 @@ class TestConfiguration:
         assert "server1" in svc_data(resp1)["output"]
         assert "server2" in svc_data(resp2)["output"]
 
-    def test_username_configuration(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_username_configuration(self, ha_api: requests.Session, ensure_integration: Any,
+                                    ssh_server_1: dict) -> None:
         """The username field is correctly forwarded to the SSH connection."""
         resp = execute(
             ha_api,
@@ -174,12 +181,13 @@ class TestConfiguration:
         output = svc_data(resp)["output"].strip()
         assert output == ssh_server_1["username"]
 
-    def test_key_file_authentication(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_key_file_authentication(self, ha_api: requests.Session, ensure_integration: Any,
+                                     ssh_server_1: dict) -> None:
         """Authenticate using a private key file instead of a password.
 
         The ed25519 key pair is generated at image build time and written to the
         shared ssh_test_init volume by ssh_docker_test_1's startup script.  The
-        public key is pre-loaded into the test user's authorized_keys, so the
+        public key is preloaded into the test user's authorized_keys, so the
         HA integration can authenticate with key_file only (no password).
         """
         resp = execute(
@@ -195,7 +203,8 @@ class TestConfiguration:
         assert resp.status_code == 200, resp.text
         assert "key_auth_ok" in svc_data(resp)["output"]
 
-    def test_check_known_hosts_true_valid(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_check_known_hosts_true_valid(self, ha_api: requests.Session, ensure_integration: Any,
+                                          ssh_server_1: dict) -> None:
         """check_known_hosts=True with a matching known_hosts file succeeds.
 
         The ssh_docker_test_1 startup script writes the server's ed25519 host
@@ -216,7 +225,8 @@ class TestConfiguration:
         assert resp.status_code == 200, resp.text
         assert "known_hosts_ok" in svc_data(resp)["output"]
 
-    def test_check_known_hosts_true_unknown_server(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+    def test_check_known_hosts_true_unknown_server(self, ha_api: requests.Session, ensure_integration: Any,
+                                                   ssh_server_1: dict) -> None:
         """check_known_hosts=True without a valid known_hosts file returns an error.
 
         When check_known_hosts=True and no known_hosts path is supplied, the
