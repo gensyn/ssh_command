@@ -6,7 +6,7 @@ import pytest
 from typing import Any
 import requests
 
-from conftest import HA_URL
+from conftest import HA_URL, SSH_KEY_FILE, SSH_KNOWN_HOSTS
 
 
 # ---------------------------------------------------------------------------
@@ -173,3 +173,66 @@ class TestConfiguration:
         assert resp.status_code == 200, resp.text
         output = svc_data(resp)["output"].strip()
         assert output == ssh_server_1["username"]
+
+    def test_key_file_authentication(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+        """Authenticate using a private key file instead of a password.
+
+        The ed25519 key pair is generated at image build time and written to the
+        shared ssh_test_init volume by ssh_docker_test_1's startup script.  The
+        public key is pre-loaded into the test user's authorized_keys, so the
+        HA integration can authenticate with key_file only (no password).
+        """
+        resp = execute(
+            ha_api,
+            {
+                "host": ssh_server_1["host"],
+                "username": ssh_server_1["username"],
+                "key_file": SSH_KEY_FILE,
+                "command": "echo key_auth_ok",
+                "check_known_hosts": False,
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        assert "key_auth_ok" in svc_data(resp)["output"]
+
+    def test_check_known_hosts_true_valid(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+        """check_known_hosts=True with a matching known_hosts file succeeds.
+
+        The ssh_docker_test_1 startup script writes the server's ed25519 host
+        public key to the shared volume.  The test supplies that file via the
+        known_hosts parameter, so host verification should pass.
+        """
+        resp = execute(
+            ha_api,
+            {
+                "host": ssh_server_1["host"],
+                "username": ssh_server_1["username"],
+                "password": ssh_server_1["password"],
+                "command": "echo known_hosts_ok",
+                "check_known_hosts": True,
+                "known_hosts": SSH_KNOWN_HOSTS,
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        assert "known_hosts_ok" in svc_data(resp)["output"]
+
+    def test_check_known_hosts_true_unknown_server(self, ha_api: requests.Session, ensure_integration: Any, ssh_server_1: dict) -> None:
+        """check_known_hosts=True without a valid known_hosts file returns an error.
+
+        When check_known_hosts=True and no known_hosts path is supplied, the
+        coordinator falls back to ~/.ssh/known_hosts, which will not contain the
+        test server's host key.  The connection attempt must be rejected.
+        """
+        resp = execute(
+            ha_api,
+            {
+                "host": ssh_server_1["host"],
+                "username": ssh_server_1["username"],
+                "password": ssh_server_1["password"],
+                "command": "echo hi",
+                "check_known_hosts": True,
+                # No known_hosts supplied — HA falls back to ~/.ssh/known_hosts
+                # which does not contain the test server's key.
+            },
+        )
+        assert resp.status_code >= 400, resp.text

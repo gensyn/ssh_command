@@ -25,6 +25,13 @@ SSH_PASSWORD: str = os.environ.get("SSH_PASSWORD", "pass")
 HA_USERNAME: str = os.environ.get("HA_USERNAME", "admin")
 HA_PASSWORD: str = os.environ.get("HA_PASSWORD", "admin")
 
+# Paths on the HA container's filesystem populated by ssh_docker_test_1's
+# startup script (see tests/playwright/ssh-init-entrypoint.sh).
+# ssh_test_init volume is mounted read-only at /ssh-test-keys in the HA
+# container, providing a user auth key and a known_hosts file for tests.
+SSH_KEY_FILE: str = os.environ.get("SSH_KEY_FILE", "/ssh-test-keys/id_ed25519")
+SSH_KNOWN_HOSTS: str = os.environ.get("SSH_KNOWN_HOSTS", "/ssh-test-keys/known_hosts")
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

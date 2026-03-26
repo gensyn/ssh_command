@@ -20,6 +20,7 @@ RUN printf '%s\n' \
         'HostKey /etc/ssh/ssh_host_ed25519_key' \
         'AuthorizedKeysFile .ssh/authorized_keys' \
         'PasswordAuthentication yes' \
+        'PubkeyAuthentication yes' \
         'KbdInteractiveAuthentication no' \
         'UsePAM no' \
         'PrintMotd no' \
@@ -27,12 +28,22 @@ RUN printf '%s\n' \
         'Subsystem sftp /usr/lib/openssh/sftp-server' \
     > /etc/ssh/sshd_config.d/test.conf
 
-# Generate host keys and create the privilege-separation directory
-RUN ssh-keygen -A && mkdir -p /run/sshd
+# Generate host keys, create the privilege-separation directory, and create
+# the test user's ed25519 auth key pair (used by key-file authentication tests).
+RUN ssh-keygen -A && \
+    mkdir -p /run/sshd && \
+    mkdir -p /home/foo/.ssh && \
+    chmod 700 /home/foo/.ssh && \
+    ssh-keygen -t ed25519 -f /home/foo/.ssh/id_ed25519 -N "" && \
+    cat /home/foo/.ssh/id_ed25519.pub > /home/foo/.ssh/authorized_keys && \
+    chmod 600 /home/foo/.ssh/id_ed25519 && \
+    chmod 644 /home/foo/.ssh/id_ed25519.pub /home/foo/.ssh/authorized_keys && \
+    chown -R foo:foo /home/foo/.ssh
+
+# Startup script: populates the shared init volume then starts sshd.
+COPY ssh-init-entrypoint.sh /ssh-init-entrypoint.sh
+RUN chmod +x /ssh-init-entrypoint.sh
 
 EXPOSE 22
 
-CMD ["/usr/sbin/sshd", "-D"]
-
-
-
+CMD ["/ssh-init-entrypoint.sh"]

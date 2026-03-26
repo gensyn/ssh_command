@@ -18,6 +18,10 @@ services:
       # entries to /etc/hosts so that all resolver calls succeed via the
       # "files" nsswitch path.
       - ./tests/playwright/ha-init-wrapper.sh:/ha-init-wrapper.sh:ro
+      # SSH test-key data written by ssh_docker_test_1 at startup.
+      # Provides the user auth private key and a known_hosts file so that
+      # key-file and known-hosts E2E tests can reference them by path.
+      - ssh_test_init:/ssh-test-keys:ro
     environment:
       - TZ=UTC
     entrypoint: ["/bin/sh", "/ha-init-wrapper.sh"]
@@ -36,6 +40,14 @@ services:
       context: tests/playwright
       dockerfile: Dockerfile.ssh
     container_name: ssh_docker_test_1
+    environment:
+      # Injected into the startup script so the known_hosts entry uses the
+      # correct hostname rather than the container's random short hostname.
+      - CONTAINER_NAME=ssh_docker_test_1
+    volumes:
+      # Shared with the HA container (read-only) at /ssh-test-keys so tests
+      # can reference /ssh-test-keys/id_ed25519 and /ssh-test-keys/known_hosts.
+      - ssh_test_init:/ssh-init-data
 
   ssh_docker_test_2:
     build:
@@ -69,5 +81,8 @@ services:
 
 volumes:
   ha_config:
-
+  # Populated by ssh_docker_test_1 at container startup; mounted read-only
+  # into the HA container at /ssh-test-keys so that key-file and known-hosts
+  # E2E tests can access the credentials by path.
+  ssh_test_init:
 
