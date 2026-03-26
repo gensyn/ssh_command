@@ -108,8 +108,29 @@ run_workflow() {
     fi
 }
 
+# ── Playwright E2E tests via docker compose ───────────────────────────────────
+# The playwright-tests.yml workflow uses `docker compose run` internally, which
+# requires a real Docker daemon.  act (Docker-in-Docker) cannot reliably run
+# that workflow, so we delegate to the dedicated run_playwright_tests.sh script.
+run_playwright_tests() {
+    local script="$SCRIPT_DIR/run_playwright_tests.sh"
+
+    if [[ ! -f "$script" ]]; then
+        warn "run_playwright_tests.sh not found – skipping Playwright E2E tests."
+        return 1
+    fi
+
+    if bash "$script"; then
+        success "playwright-tests.yml passed"
+        return 0
+    else
+        error "playwright-tests.yml failed"
+        return 1
+    fi
+}
+
 run_all_workflows() {
-    # Only workflows that run entirely locally (tests and linting).
+    # Only act-compatible workflows (no Docker-in-Docker requirement).
     # Workflows that depend on GitHub infrastructure (hassfest, HACS validation,
     # release) are silently omitted.
     local workflow_files=(
@@ -143,6 +164,13 @@ run_all_workflows() {
             failed+=("$workflow")
         fi
     done
+
+    # ── Playwright E2E tests (docker compose, not act) ────────────────────────
+    if run_playwright_tests; then
+        passed+=("playwright-tests.yml")
+    else
+        failed+=("playwright-tests.yml")
+    fi
 
     # ── Summary ───────────────────────────────────────────────────────────────
     header "══════════════════════════════════════════════"

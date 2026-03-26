@@ -1,0 +1,88 @@
+services:
+
+  # ── Home Assistant ──────────────────────────────────────────────────────────
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant_test
+    volumes:
+      # Persistent HA config (survives container restarts; start fresh with
+      # `docker compose down -v`).
+      - ha_config:/config
+      # Mount the integration source as a custom component so HA loads it on
+      # startup without any extra copy step.
+      - ./:/config/custom_components/ssh_command:ro
+      # Startup wrapper that pre-populates /etc/hosts before launching HA.
+      # Alpine Linux (musl libc) cannot resolve Docker container hostnames via
+      # Python's socket module because of iptables/UDP limitations in this
+      # environment.  The wrapper uses busybox nslookup (which works) to add
+      # entries to /etc/hosts so that all resolver calls succeed via the
+      # "files" nsswitch path.
+      - ./tests/playwright/ha-init-wrapper.sh:/ha-init-wrapper.sh:ro
+      # SSH test-key data written by ssh_docker_test_1 at startup.
+      # Provides the user auth private key and a known_hosts file so that
+      # key-file and known-hosts E2E tests can reference them by path.
+      - ssh_test_init:/ssh-test-keys:ro
+    environment:
+      - TZ=UTC
+    entrypoint: ["/bin/sh", "/ha-init-wrapper.sh"]
+    # Clear the external search domain that musl's resolver would try first,
+    # which causes timeouts in this Azure-hosted environment.
+    dns_search: "."
+    restart: unless-stopped
+
+  # ── SSH test servers ────────────────────────────────────────────────────────
+  # Two identical Ubuntu-based containers each run a single sshd on port 22
+  # (the SSH default).  The Home Assistant integration connects to port 22 by
+  # default, so no port mapping is required.
+  # Credentials: user=foo  password=pass
+  ssh_docker_test_1:
+    build:
+      context: tests/playwright
+      dockerfile: Dockerfile.ssh
+    container_name: ssh_docker_test_1
+    environment:
+      # Injected into the startup script so the known_hosts entry uses the
+      # correct hostname rather than the container's random short hostname.
+      - CONTAINER_NAME=ssh_docker_test_1
+    volumes:
+      # Shared with the HA container (read-only) at /ssh-test-keys so tests
+      # can reference /ssh-test-keys/id_ed25519 and /ssh-test-keys/known_hosts.
+      - ssh_test_init:/ssh-init-data
+
+  ssh_docker_test_2:
+    build:
+      context: tests/playwright
+      dockerfile: Dockerfile.ssh
+    container_name: ssh_docker_test_2
+
+  # ── Playwright E2E test runner ──────────────────────────────────────────────
+  # Not started by default (`docker compose up`); invoke explicitly:
+  #   docker compose run --rm playwright-tests
+  playwright-tests:
+    build:
+      context: .
+      dockerfile: tests/playwright/Dockerfile
+    environment:
+      - HOMEASSISTANT_URL=http://homeassistant:8123
+      - SSH_HOST_1=ssh_docker_test_1
+      - SSH_HOST_2=ssh_docker_test_2
+      - SSH_USER=foo
+      - SSH_PASSWORD=pass
+      - HA_USERNAME=admin
+      - HA_PASSWORD=admin
+    volumes:
+      # Test results (JUnit XML) written here are available on the host after
+      # the container exits, e.g. for CI artifact upload.
+      - ./playwright-results:/app/playwright-results
+    depends_on:
+      - homeassistant
+      - ssh_docker_test_1
+      - ssh_docker_test_2
+
+volumes:
+  ha_config:
+  # Populated by ssh_docker_test_1 at container startup; mounted read-only
+  # into the HA container at /ssh-test-keys so that key-file and known-hosts
+  # E2E tests can access the credentials by path.
+  ssh_test_init:
+

@@ -1,0 +1,49 @@
+# Minimal SSH test server with a single user (foo / pass).
+# One sshd daemon runs on the standard port 22 so the Home Assistant
+# integration (which defaults to port 22) can connect without any
+# port-number configuration.
+FROM ubuntu:24.04
+
+RUN apt-get update -qq && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
+        openssh-server \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create the test user
+RUN useradd -m -s /bin/sh foo && \
+    echo "foo:pass" | chpasswd
+
+# Write an sshd config
+RUN printf '%s\n' \
+        'HostKey /etc/ssh/ssh_host_rsa_key' \
+        'HostKey /etc/ssh/ssh_host_ecdsa_key' \
+        'HostKey /etc/ssh/ssh_host_ed25519_key' \
+        'AuthorizedKeysFile .ssh/authorized_keys' \
+        'PasswordAuthentication yes' \
+        'PubkeyAuthentication yes' \
+        'KbdInteractiveAuthentication no' \
+        'UsePAM no' \
+        'PrintMotd no' \
+        'PrintLastLog no' \
+        'Subsystem sftp /usr/lib/openssh/sftp-server' \
+    > /etc/ssh/sshd_config.d/test.conf
+
+# Generate host keys, create the privilege-separation directory, and create
+# the test user's ed25519 auth key pair (used by key-file authentication tests).
+RUN ssh-keygen -A && \
+    mkdir -p /run/sshd && \
+    mkdir -p /home/foo/.ssh && \
+    chmod 700 /home/foo/.ssh && \
+    ssh-keygen -t ed25519 -f /home/foo/.ssh/id_ed25519 -N "" && \
+    cat /home/foo/.ssh/id_ed25519.pub > /home/foo/.ssh/authorized_keys && \
+    chmod 600 /home/foo/.ssh/id_ed25519 && \
+    chmod 644 /home/foo/.ssh/id_ed25519.pub /home/foo/.ssh/authorized_keys && \
+    chown -R foo:foo /home/foo/.ssh
+
+# Startup script: populates the shared init volume then starts sshd.
+COPY ssh-init-entrypoint.sh /ssh-init-entrypoint.sh
+RUN chmod +x /ssh-init-entrypoint.sh
+
+EXPOSE 22
+
+CMD ["/ssh-init-entrypoint.sh"]
