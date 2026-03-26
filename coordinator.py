@@ -71,6 +71,7 @@ class SshCommandCoordinator:
             CONF_PASSWORD: password,
             CONF_CLIENT_KEYS: key_file,
             CONF_KNOWN_HOSTS: await self._resolve_known_hosts(check_known_hosts, known_hosts),
+            "connect_timeout": timeout,
         }
 
         run_kwargs: dict[str, Any] = {
