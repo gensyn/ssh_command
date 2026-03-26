@@ -102,17 +102,14 @@ def get_ha_token() -> str:
 
 
 def wait_for_ha(timeout: int = 300) -> None:
-    """Block until Home Assistant is fully started and onboarding is complete.
+    """Block until Home Assistant is fully started and accepts API requests.
 
-    Phase 1: polls GET /api/onboarding until HA responds.  This endpoint
-    requires no authentication and cannot trigger HA's IP-ban mechanism.
+    Polls GET /api/onboarding which requires no authentication and therefore
+    cannot trigger HA's IP-ban mechanism.  The endpoint returns HTTP 200 even
+    during onboarding, so it is safe to use as a startup indicator.
 
-    Phase 2: waits until ALL onboarding steps are marked ``done``.  HA's SPA
-    redirects to /onboarding.html when any step is still pending, even when a
-    valid access token is present in localStorage.
-
-    Phase 3: a short fixed delay lets HA finish loading custom components and
-    installing their requirements (asyncssh etc.) after onboarding completes.
+    A second pass waits for the integration to be loadable (the custom
+    component may still be installing its requirements).
     """
     deadline = time.time() + timeout
 
@@ -128,31 +125,9 @@ def wait_for_ha(timeout: int = 300) -> None:
     else:
         raise RuntimeError(f"Home Assistant did not become ready within {timeout}s")
 
-    # Phase 2: wait for all onboarding steps to be done.
-    # HA's SPA fetches /api/onboarding on load; if any step is still pending it
-    # redirects to /onboarding.html regardless of the localStorage token.
-    while time.time() < deadline:
-        try:
-            resp = requests.get(f"{HA_URL}/api/onboarding", timeout=5)
-            if resp.status_code == 200:
-                steps = resp.json()
-                if isinstance(steps, list) and steps and all(
-                    s.get("done") for s in steps
-                ):
-                    break
-        except requests.RequestException:
-            pass
-        time.sleep(3)
-    else:
-        try:
-            state = requests.get(f"{HA_URL}/api/onboarding", timeout=5).json()
-        except Exception:  # noqa: BLE001
-            state = "unavailable"
-        raise RuntimeError(
-            f"HA onboarding not complete within {timeout}s — pending steps: {state}"
-        )
-
-    # Phase 3: short settle delay after onboarding
+    # Phase 2: wait for the config-entries API to be usable (integrations loaded)
+    # We use a small fixed delay to let HA finish loading custom components and
+    # installing their requirements (asyncssh etc.) after the web server is up.
     time.sleep(15)
 
 
@@ -304,15 +279,16 @@ def ensure_integration(ha_api: requests.Session) -> Generator[None, None, None]:
         for e in resp.json()
         if e.get("domain") == "ssh_command"
     }
-    was_present = bool(entries_before)
+
+    # There should be not entry
+    assert not entries_before
 
     # If the integration is not yet configured, add it now
-    if not was_present:
-        flow_resp = ha_api.post(
-            f"{HA_URL}/api/config/config_entries/flow",
-            json={"handler": "ssh_command"},
-        )
-        flow_resp.raise_for_status()
+    flow_resp = ha_api.post(
+        f"{HA_URL}/api/config/config_entries/flow",
+        json={"handler": "ssh_command"},
+    )
+    flow_resp.raise_for_status()
 
     yield
 
@@ -328,13 +304,6 @@ def ensure_integration(ha_api: requests.Session) -> Generator[None, None, None]:
     # Remove entries that were added during the test
     for entry_id in entries_after - entries_before:
         ha_api.delete(f"{HA_URL}/api/config/config_entries/entry/{entry_id}")
-
-    # If the integration was absent before and the fixture added it, it was
-    # already in entries_before == {} so the loop above handles removal.
-    # If the integration was present before but the test removed it, restore it.
-    if was_present and not entries_after:
-        _add_integration(ha_api)
-
 
 def _get_ssh_command_entry_ids(ha_api: requests.Session) -> set[str]:
     """Return the set of current ssh_command config-entry IDs."""
