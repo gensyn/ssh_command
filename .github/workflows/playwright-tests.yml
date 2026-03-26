@@ -1,7 +1,6 @@
 name: Playwright E2E Tests
 
 on:
-  push:
   workflow_dispatch:
 
 jobs:
