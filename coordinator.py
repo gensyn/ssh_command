@@ -12,8 +12,27 @@ from __future__ import annotations
 
 import logging
 import socket
+import sys
 from pathlib import Path
 from typing import Any
+
+_LOGGER = logging.getLogger(__name__)
+
+# asyncssh optionally imports fido2.client.windows for Windows WebAuthn support.
+# fido2's Windows-specific module (win_api) uses ctypes.HRESULT, which Python 3.14
+# removed on non-Windows platforms, causing an AttributeError that asyncssh does not
+# catch (it only catches ImportError in that code path).  Pre-attempt the import here
+# so that on failure we can replace the broken sys.modules entry with None, which
+# makes Python raise ImportError instead — and asyncssh handles that gracefully.
+if sys.platform != "win32":
+    try:
+        import fido2.client.windows  # noqa: F401
+    except (ImportError, OSError, AttributeError) as _fido2_err:
+        _LOGGER.debug(
+            "fido2.client.windows unavailable (%s); asyncssh Windows WebAuthn support disabled",
+            _fido2_err,
+        )
+        sys.modules["fido2.client.windows"] = None  # type: ignore[assignment]
 
 from asyncssh import HostKeyNotVerifiable, KeyImportError, PermissionDenied, connect, read_known_hosts
 
@@ -34,8 +53,6 @@ from .const import (
     CONF_EXIT_STATUS,
     CONST_DEFAULT_TIMEOUT,
 )
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class SshCommandCoordinator:
