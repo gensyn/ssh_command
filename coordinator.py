@@ -12,11 +12,31 @@ from __future__ import annotations
 
 import logging
 import socket
+import sys
 from pathlib import Path
 from typing import Any
 
-from asyncssh import HostKeyNotVerifiable, KeyImportError, PermissionDenied, connect, read_known_hosts
+_LOGGER = logging.getLogger(__name__)
 
+# asyncssh optionally imports fido2.client.windows for Windows WebAuthn support.
+# fido2's Windows-specific module (win_api) uses ctypes.HRESULT, which Python 3.14
+# removed on non-Windows platforms, causing an AttributeError that asyncssh does not
+# catch (it only catches ImportError in that code path).  Pre-attempt the import here
+# so that on failure we can replace the broken sys.modules entry with None, which
+# makes Python raise ImportError instead — and asyncssh handles that gracefully.
+if sys.platform != "win32":
+    try:
+        import fido2.client.windows  # noqa: F401
+    except (ImportError, OSError, AttributeError) as _fido2_err:
+        _LOGGER.debug(
+            "fido2.client.windows unavailable (%s); asyncssh Windows WebAuthn support disabled",
+            _fido2_err,
+        )
+        sys.modules["fido2.client.windows"] = None  # type: ignore[assignment]
+
+from asyncssh import HostKeyNotVerifiable, KeyImportError, PermissionDenied, connect, read_known_hosts, DEFAULT_PORT
+
+from .const import CONF_CONNECTION_TIMEOUT
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, CONF_HOST, CONF_COMMAND, CONF_TIMEOUT
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
@@ -33,9 +53,8 @@ from .const import (
     CONF_ERROR,
     CONF_EXIT_STATUS,
     CONST_DEFAULT_TIMEOUT,
+    CONF_PORT,
 )
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class SshCommandCoordinator:
@@ -52,6 +71,7 @@ class SshCommandCoordinator:
     async def async_execute(self, data: dict[str, Any]) -> dict[str, Any]:
         """Execute an SSH command and return stdout, stderr and exit status."""
         host = data.get(CONF_HOST)
+        port = data.get(CONF_PORT, DEFAULT_PORT)
         username = data.get(CONF_USERNAME)
         password = data.get(CONF_PASSWORD)
         key_file = data.get(CONF_KEY_FILE)
@@ -67,11 +87,12 @@ class SshCommandCoordinator:
 
         conn_kwargs = {
             CONF_HOST: host,
+            CONF_PORT: port,
             CONF_USERNAME: username,
             CONF_PASSWORD: password,
             CONF_CLIENT_KEYS: key_file,
             CONF_KNOWN_HOSTS: await self._resolve_known_hosts(check_known_hosts, known_hosts),
-            "connect_timeout": timeout,
+            CONF_CONNECTION_TIMEOUT: timeout,
         }
 
         run_kwargs: dict[str, Any] = {
@@ -107,6 +128,13 @@ class SshCommandCoordinator:
                 translation_domain=DOMAIN,
                 translation_key="login_failed",
             ) from exc
+        except ConnectionRefusedError as exc:
+            _LOGGER.warning("Connection refused for %s@%s: %s", username, host, exc)
+            raise ServiceValidationError(
+                "Connection refused.",
+                translation_domain=DOMAIN,
+                translation_key="connection_refused",
+            )
         except TimeoutError as exc:
             _LOGGER.warning("SSH connection to %s timed out: %s", host, exc)
             raise ServiceValidationError(

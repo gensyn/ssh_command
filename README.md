@@ -39,6 +39,7 @@ This integration does not create devices or entities. It only registers the `ssh
 #### Parameters
 
 - `host` (required) — Hostname or IP address of the remote server
+- `port` (default: `22`) — SSH port of the remote server
 - `username` (required) — SSH username
 - `password` — SSH password (use instead of key_file)
 - `key_file` — Path to an SSH private key file (use instead of password)

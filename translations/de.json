@@ -14,9 +14,17 @@
                 "name": "Host",
                 "description": "Hostname oder IP-Adresse des Zielhosts."
             },
+            "port": {
+                "name": "Port",
+                "description": "Portnummer für die SSH-Verbindung (Standard ist 22)."
+            },
             "username": {
                 "name": "Benutzername",
-                "description": "Der Benutzername für die SSH-Anmeldung (optional, wenn Schlüsseldatei verwendet wird)."
+                "description": "Der Benutzername für die SSH-Anmeldung."
+            },
+            "password": {
+                "name": "Password",
+                "description": "Das Passwort für die SSH-Anmeldung."
             },
             "key_file": {
                 "name": "Schlüsseldatei",
@@ -72,6 +80,9 @@
     },
     "login_failed": {
       "message": "SSH-Anmeldung fehlgeschlagen."
+    },
+    "connection_refused": {
+      "message": "Die Verbindung zum Host wurde abgelehnt."
     },
     "host_not_reachable": {
       "message": "Der Host ist nicht erreichbar."
