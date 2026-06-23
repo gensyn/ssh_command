@@ -9,6 +9,13 @@ execute:
       required: true
       selector:
         text:
+    port:
+      name: Port
+      description: Port number for the SSH connection (default is 22).
+      required: false
+      default: 22
+      selector:
+        number:
     username:
       name: Username
       description: Username for SSH authentication (optional if using key-based authentication).

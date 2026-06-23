@@ -2,12 +2,14 @@
 
 DOMAIN = "ssh_command"
 
+CONF_PORT = "port"
 CONF_CLIENT_KEYS = "client_keys"
 CONF_KEY_FILE = "key_file"
 CONF_INPUT = "input"
 CONF_CHECK = "check"
 CONF_CHECK_KNOWN_HOSTS = "check_known_hosts"
 CONF_KNOWN_HOSTS = "known_hosts"
+CONF_CONNECTION_TIMEOUT = "connect_timeout"
 
 CONF_OUTPUT = "output"
 CONF_ERROR = "error"

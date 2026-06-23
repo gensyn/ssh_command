@@ -14,7 +14,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 from .const import DOMAIN, SERVICE_EXECUTE, CONF_KEY_FILE, CONF_INPUT, CONST_DEFAULT_TIMEOUT, \
-    CONF_CHECK_KNOWN_HOSTS, CONF_KNOWN_HOSTS
+    CONF_CHECK_KNOWN_HOSTS, CONF_KNOWN_HOSTS, CONF_PORT
 from .coordinator import SshCommandCoordinator
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)  # pylint: disable=invalid-name
@@ -69,6 +69,7 @@ SERVICE_EXECUTE_SCHEMA = vol.Schema(
     vol.All(
         {
             vol.Required(CONF_HOST): str,
+            vol.Optional(CONF_PORT): int,
             vol.Required(CONF_USERNAME): str,
             vol.Optional(CONF_PASSWORD): str,
             vol.Optional(CONF_KEY_FILE): str,

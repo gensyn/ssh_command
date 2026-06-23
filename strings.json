@@ -8,11 +8,15 @@
   "services": {
     "execute": {
         "name": "Execute SSH Command",
-        "description": "Executes a specified command on a remote machine via SSH.",
+        "description": "Executes a specified command on a remote host via SSH.",
         "fields": {
             "host": {
                 "name": "Host",
-                "description": "Hostname or IP address of the remote machine."
+                "description": "Hostname or IP address of the remote host."
+            },
+            "port": {
+                "name": "Port",
+                "description": "Port number for SSH connection (default is 22)."
             },
             "username": {
                 "name": "Username",
@@ -20,7 +24,7 @@
             },
             "password": {
                 "name": "Password",
-                "description": "Password for SSH authentication (optional if using key-based authentication)."
+                "description": "Password for SSH authentication."
             },
             "key_file": {
                 "name": "Key File",
@@ -32,7 +36,7 @@
             },
             "input": {
                 "name": "Input",
-                "description": "Input to send to the standard input of the remote process."
+                "description": "Input to send to the standard input of the host."
             },
             "check_known_hosts": {
                 "name": "Check Known Hosts",
@@ -76,6 +80,9 @@
     },
     "login_failed": {
       "message": "SSH login failed."
+    },
+    "connection_refused": {
+      "message": "Connection to the host was refused."
     },
     "host_not_reachable": {
       "message": "Host is not reachable."

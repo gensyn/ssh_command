@@ -14,9 +14,17 @@
                 "name": "Host",
                 "description": "Hostname or IP address of the remote host."
             },
+            "port": {
+                "name": "Port",
+                "description": "Port number for SSH connection (default is 22)."
+            },
             "username": {
                 "name": "Username",
                 "description": "Username for SSH authentication."
+            },
+            "password": {
+                "name": "Password",
+                "description": "Password for SSH authentication."
             },
             "key_file": {
                 "name": "Key File",
@@ -72,6 +80,9 @@
     },
     "login_failed": {
       "message": "SSH login failed."
+    },
+    "connection_refused": {
+      "message": "Connection to the host was refused."
     },
     "host_not_reachable": {
       "message": "Host is not reachable."
