@@ -108,6 +108,15 @@ class TestSshCommandCoordinator(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(ctx.exception.translation_key, "host_not_reachable")
 
+    async def test_async_execute_network_unreachable(self):
+        err = OSError(101, "Connect call failed ('192.0.2.1', 22)")
+
+        with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(err)):
+            with self.assertRaises(ServiceValidationError) as ctx:
+                await self.coordinator.async_execute(EXECUTE_DATA_BASE)
+
+        self.assertEqual(ctx.exception.translation_key, "host_not_reachable")
+
     async def test_async_execute_other_oserror_reraised(self):
         err = OSError("something else")
 

@@ -658,6 +658,25 @@ class TestExecuteServiceErrors:
 
         assert exc_info.value.translation_key == "host_not_reachable"
 
+    async def test_network_unreachable(self, hass: HomeAssistant) -> None:
+        err = OSError(101, "Connect call failed ('192.0.2.1', 22)")
+        entry = _make_entry()
+        await _setup_entry(hass, entry)
+
+        with patch("custom_components.ssh_command.coordinator.connect",
+                   return_value=_MockConnectRaises(err)):
+            with patch("pathlib.Path.exists", return_value=False):
+                with pytest.raises(ServiceValidationError) as exc_info:
+                    await hass.services.async_call(
+                        DOMAIN,
+                        SERVICE_EXECUTE,
+                        SERVICE_DATA_BASE,
+                        blocking=True,
+                        return_response=True,
+                    )
+
+        assert exc_info.value.translation_key == "host_not_reachable"
+
     async def test_other_oserror_is_reraised(self, hass: HomeAssistant) -> None:
         err = OSError("something else")
         entry = _make_entry()

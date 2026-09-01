@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import socket
 import sys
+from errno import ENETUNREACH, EHOSTUNREACH
 from pathlib import Path
 from typing import Any
 
@@ -162,7 +163,7 @@ class SshCommandCoordinator:
                 translation_key="connection_timed_out",
             ) from exc
         except OSError as exc:
-            if isinstance(exc, socket.gaierror):
+            if isinstance(exc, socket.gaierror) or exc.errno in (ENETUNREACH, EHOSTUNREACH):
                 _LOGGER.warning("Host %s is not reachable: %s", host, exc)
                 raise ServiceValidationError(
                     "Host is not reachable.",
