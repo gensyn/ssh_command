@@ -13,8 +13,17 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse, Ser
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
-from .const import DOMAIN, SERVICE_EXECUTE, CONF_KEY_FILE, CONF_PASSPHRASE, CONF_INPUT, CONST_DEFAULT_TIMEOUT, \
-    CONF_CHECK_KNOWN_HOSTS, CONF_KNOWN_HOSTS, CONF_PORT
+from .const import (
+    CONF_CHECK_KNOWN_HOSTS,
+    CONF_INPUT,
+    CONF_KEY_FILE,
+    CONF_KNOWN_HOSTS,
+    CONF_PASSPHRASE,
+    CONF_PORT,
+    CONST_DEFAULT_TIMEOUT,
+    DOMAIN,
+    SERVICE_EXECUTE,
+)
 from .coordinator import SshCommandCoordinator
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)  # pylint: disable=invalid-name
