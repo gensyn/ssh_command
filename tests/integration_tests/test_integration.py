@@ -659,8 +659,9 @@ class TestExecuteServiceErrors:
         assert exc_info.value.translation_key == "host_not_reachable"
 
     async def test_network_unreachable(self, hass: HomeAssistant) -> None:
-        err = OSError(101, "Connect call failed ('192.0.2.1', 22)")
-        entry = _make_entry()
+        from errno import ENETUNREACH
+
+        err = OSError(ENETUNREACH, "Connect call failed ('192.0.2.1', 22)")
         await _setup_entry(hass, entry)
 
         with patch("custom_components.ssh_command.coordinator.connect",
