@@ -662,6 +662,7 @@ class TestExecuteServiceErrors:
         from errno import ENETUNREACH
 
         err = OSError(ENETUNREACH, "Connect call failed ('192.0.2.1', 22)")
+        entry = _make_entry()
         await _setup_entry(hass, entry)
 
         with patch("custom_components.ssh_command.coordinator.connect",
