@@ -28,6 +28,7 @@ execute:
       required: false
       selector:
         text:
+          type: password
     key_file:
       name: Key File
       description: Path to the SSH private key file for key-based authentication (optional if using username/password).
@@ -40,6 +41,7 @@ execute:
       required: false
       selector:
         text:
+          type: password
     command:
       name: Command
       description: The command to execute on the host.

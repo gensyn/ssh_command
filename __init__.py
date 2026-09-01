@@ -23,7 +23,7 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)  # pylint: disable=invalid-name
 async def _validate_service_data(hass: HomeAssistant, data: dict[str, Any]) -> None:
     has_password: bool = bool(data.get(CONF_PASSWORD))
     has_key_file: bool = bool(data.get(CONF_KEY_FILE))
-    has_passphrase: bool = bool(data.get(CONF_PASSPHRASE))
+    has_passphrase: bool = data.get(CONF_PASSPHRASE) is not None
 
     if not has_password and not has_key_file:
         raise ServiceValidationError(

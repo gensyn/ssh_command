@@ -73,6 +73,9 @@
     "passphrase_requires_key_file": {
       "message": "Passphrase kann nur verwendet werden, wenn key_file angegeben ist."
     },
+    "invalid_key_passphrase": {
+      "message": "Die Passphrase für die Schlüsseldatei ist ungültig."
+    },
     "invalid_key_file": {
       "message": "Die Schlüsseldatei ist kein gültiger privater Schlüssel."
     },
