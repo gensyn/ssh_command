@@ -34,6 +34,11 @@ class TestValidateServiceData(unittest.IsolatedAsyncioTestCase):
             await _validate_service_data(self.mock_hass, {"password": "secret", "key_file": "/home/user/.ssh/id_rsa", "command": "echo hi"})
         self.assertEqual(ctx.exception.translation_key, "password_and_key_file")
 
+    async def test_passphrase_without_key_file_raises(self):
+        with self.assertRaises(ServiceValidationError) as ctx:
+            await _validate_service_data(self.mock_hass, {"password": "secret", "passphrase": "topsecret", "command": "echo hi"})
+        self.assertEqual(ctx.exception.translation_key, "passphrase_requires_key_file")
+
     async def test_no_command_no_input_raises(self):
         with self.assertRaises(ServiceValidationError) as ctx:
             await _validate_service_data(self.mock_hass, {"password": "secret"})

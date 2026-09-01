@@ -30,6 +30,10 @@
                 "name": "Key File",
                 "description": "Path to the SSH private key file for key-based authentication."
             },
+            "passphrase": {
+                "name": "Passphrase",
+                "description": "Passphrase for the SSH private key file, if the key is encrypted."
+            },
             "command": {
                 "name": "Command",
                 "description": "The command to execute on the machine."
@@ -65,6 +69,9 @@
     },
     "key_file_not_found": {
       "message": "Could not find key file."
+    },
+    "passphrase_requires_key_file": {
+      "message": "Passphrase can only be used when key_file is provided."
     },
     "invalid_key_file": {
       "message": "The key file is not a valid private key."

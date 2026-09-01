@@ -30,6 +30,10 @@
                 "name": "Schlüsseldatei",
                 "description": "Der Pfad zur privaten Schlüsseldatei für die SSH-Anmeldung"
             },
+            "passphrase": {
+                "name": "Passphrase",
+                "description": "Passphrase für die SSH-Schlüsseldatei, falls der Schlüssel verschlüsselt ist."
+            },
             "command": {
                 "name": "Befehl",
                 "description": "Der Befehl, der auf dem Host ausgeführt werden soll."
@@ -65,6 +69,9 @@
     },
     "key_file_not_found": {
       "message": "Konnte Schlüsseldatei nicht finden."
+    },
+    "passphrase_requires_key_file": {
+      "message": "Passphrase kann nur verwendet werden, wenn key_file angegeben ist."
     },
     "invalid_key_file": {
       "message": "Die Schlüsseldatei ist kein gültiger privater Schlüssel."

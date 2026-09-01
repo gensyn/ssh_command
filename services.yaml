@@ -34,6 +34,12 @@ execute:
       required: false
       selector:
         text:
+    passphrase:
+      name: Passphrase
+      description: Passphrase for the private key file. Only valid when `key_file` is set.
+      required: false
+      selector:
+        text:
     command:
       name: Command
       description: The command to execute on the host.

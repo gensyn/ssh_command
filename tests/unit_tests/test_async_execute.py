@@ -145,6 +145,25 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(OSError):
                 await self.handler(service_call)
 
+    async def test_passphrase_is_forwarded_to_connect(self):
+        mock_conn = self._make_mock_conn(stdout="ok", stderr="", exit_status=0)
+        data = {
+            "host": "192.0.2.1",
+            "username": "user",
+            "key_file": "/home/user/.ssh/id_rsa",
+            "passphrase": "topsecret",
+            "command": "echo hello",
+            "check_known_hosts": False,
+        }
+        service_call = self._make_service_call(data)
+
+        with patch("pathlib.Path.exists", return_value=True):
+            with patch("ssh_command.coordinator.connect", return_value=_MockConnect(mock_conn)) as mock_connect:
+                await self.handler(service_call)
+
+        call_kwargs = mock_connect.call_args[1]
+        self.assertEqual(call_kwargs["passphrase"], "topsecret")
+
     async def test_input_from_file(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tf:
             tf.write("file content\n")
