@@ -34,7 +34,15 @@ if sys.platform != "win32":
         )
         sys.modules["fido2.client.windows"] = None  # type: ignore[assignment]
 
-from asyncssh import HostKeyNotVerifiable, KeyImportError, PermissionDenied, connect, read_known_hosts, DEFAULT_PORT
+from asyncssh import (
+    HostKeyNotVerifiable,
+    KeyEncryptionError,
+    KeyImportError,
+    PermissionDenied,
+    connect,
+    read_known_hosts,
+    DEFAULT_PORT,
+)
 
 from .const import CONF_CONNECTION_TIMEOUT
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, CONF_HOST, CONF_COMMAND, CONF_TIMEOUT
@@ -44,6 +52,7 @@ from homeassistant.exceptions import ServiceValidationError
 from .const import (
     DOMAIN,
     CONF_KEY_FILE,
+    CONF_PASSPHRASE,
     CONF_INPUT,
     CONF_CHECK_KNOWN_HOSTS,
     CONF_KNOWN_HOSTS,
@@ -75,6 +84,7 @@ class SshCommandCoordinator:
         username = data.get(CONF_USERNAME)
         password = data.get(CONF_PASSWORD)
         key_file = data.get(CONF_KEY_FILE)
+        passphrase = data.get(CONF_PASSPHRASE)
         command = data.get(CONF_COMMAND)
         input_data = data.get(CONF_INPUT)
         check_known_hosts = data.get(CONF_CHECK_KNOWN_HOSTS, True)
@@ -94,6 +104,8 @@ class SshCommandCoordinator:
             CONF_KNOWN_HOSTS: await self._resolve_known_hosts(check_known_hosts, known_hosts),
             CONF_CONNECTION_TIMEOUT: timeout,
         }
+        if passphrase is not None:
+            conn_kwargs[CONF_PASSPHRASE] = passphrase
 
         run_kwargs: dict[str, Any] = {
             CONF_COMMAND: command,
@@ -113,6 +125,13 @@ class SshCommandCoordinator:
                 "The host key could not be verified.",
                 translation_domain=DOMAIN,
                 translation_key="host_key_not_verifiable",
+            ) from exc
+        except KeyEncryptionError as exc:
+            _LOGGER.warning("Invalid passphrase for %s@%s: %s", username, host, exc)
+            raise ServiceValidationError(
+                "The key file passphrase is invalid.",
+                translation_domain=DOMAIN,
+                translation_key="invalid_key_passphrase",
             ) from exc
         except KeyImportError as exc:
             _LOGGER.warning("Invalid key file for %s@%s: %s", username, host, exc)

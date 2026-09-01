@@ -12,7 +12,7 @@ sys.path.insert(0, absolute_mock_path)
 absolute_plugin_path = str(Path(__file__).parent.parent.parent.parent.absolute())
 sys.path.insert(0, absolute_plugin_path)
 
-from asyncssh import HostKeyNotVerifiable, KeyImportError, PermissionDenied
+from asyncssh import HostKeyNotVerifiable, KeyEncryptionError, KeyImportError, PermissionDenied
 
 from homeassistant.exceptions import ServiceValidationError
 
@@ -109,6 +109,24 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(ctx.exception.translation_key, "invalid_key_file")
 
+    async def test_invalid_passphrase(self):
+        data = {
+            "host": "192.0.2.1",
+            "username": "user",
+            "key_file": "/home/user/.ssh/id_rsa",
+            "passphrase": "wrong",
+            "command": "echo hello",
+            "check_known_hosts": False,
+        }
+        service_call = self._make_service_call(data)
+
+        with patch("pathlib.Path.exists", return_value=True):
+            with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(KeyEncryptionError("Incorrect passphrase"))):
+                with self.assertRaises(ServiceValidationError) as ctx:
+                    await self.handler(service_call)
+
+        self.assertEqual(ctx.exception.translation_key, "invalid_key_passphrase")
+
     async def test_permission_denied(self):
         service_call = self._make_service_call(SERVICE_DATA_BASE)
 
@@ -144,6 +162,44 @@ class TestAsyncExecute(unittest.IsolatedAsyncioTestCase):
         with patch("ssh_command.coordinator.connect", return_value=_MockConnectRaises(err)):
             with self.assertRaises(OSError):
                 await self.handler(service_call)
+
+    async def test_passphrase_is_forwarded_to_connect(self):
+        mock_conn = self._make_mock_conn(stdout="ok", stderr="", exit_status=0)
+        data = {
+            "host": "192.0.2.1",
+            "username": "user",
+            "key_file": "/home/user/.ssh/id_rsa",
+            "passphrase": "topsecret",
+            "command": "echo hello",
+            "check_known_hosts": False,
+        }
+        service_call = self._make_service_call(data)
+
+        with patch("pathlib.Path.exists", return_value=True):
+            with patch("ssh_command.coordinator.connect", return_value=_MockConnect(mock_conn)) as mock_connect:
+                await self.handler(service_call)
+
+        call_kwargs = mock_connect.call_args[1]
+        self.assertEqual(call_kwargs["passphrase"], "topsecret")
+
+    async def test_empty_passphrase_is_forwarded_to_connect(self):
+        mock_conn = self._make_mock_conn(stdout="ok", stderr="", exit_status=0)
+        data = {
+            "host": "192.0.2.1",
+            "username": "user",
+            "key_file": "/home/user/.ssh/id_rsa",
+            "passphrase": "",
+            "command": "echo hello",
+            "check_known_hosts": False,
+        }
+        service_call = self._make_service_call(data)
+
+        with patch("pathlib.Path.exists", return_value=True):
+            with patch("ssh_command.coordinator.connect", return_value=_MockConnect(mock_conn)) as mock_connect:
+                await self.handler(service_call)
+
+        call_kwargs = mock_connect.call_args[1]
+        self.assertEqual(call_kwargs["passphrase"], "")
 
     async def test_input_from_file(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tf:

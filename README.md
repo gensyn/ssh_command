@@ -43,6 +43,7 @@ This integration does not create devices or entities. It only registers the `ssh
 - `username` (required) — SSH username
 - `password` — SSH password (use instead of key_file)
 - `key_file` — Path to an SSH private key file (use instead of password)
+- `passphrase` — Passphrase for an encrypted private key file (only valid when `key_file` is used)
 - `command` — Command string to execute on the host
 - `input` — Input to send to the `stdin` of the host. If this is a file path, the content of the file will be sent.
 - `check_known_hosts` (default: `true`) — Verify host key against known hosts
@@ -54,6 +55,7 @@ All parameters are optional in the raw schema except `host` and `username` — t
 #### Validation rules enforced by the service
 
 - Either `password` or `key_file` must be provided, but not both
+- `passphrase` may only be provided when `key_file` is used
 - Either `command` or `input` or both must be provided
 - If `key_file` is provided, the file must exist on the Home Assistant filesystem
 - `known_hosts` may not be provided when `check_known_hosts` is `false`

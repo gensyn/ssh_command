@@ -13,8 +13,17 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse, Ser
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
-from .const import DOMAIN, SERVICE_EXECUTE, CONF_KEY_FILE, CONF_INPUT, CONST_DEFAULT_TIMEOUT, \
-    CONF_CHECK_KNOWN_HOSTS, CONF_KNOWN_HOSTS, CONF_PORT
+from .const import (
+    CONF_CHECK_KNOWN_HOSTS,
+    CONF_INPUT,
+    CONF_KEY_FILE,
+    CONF_KNOWN_HOSTS,
+    CONF_PASSPHRASE,
+    CONF_PORT,
+    CONST_DEFAULT_TIMEOUT,
+    DOMAIN,
+    SERVICE_EXECUTE,
+)
 from .coordinator import SshCommandCoordinator
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)  # pylint: disable=invalid-name
@@ -23,6 +32,7 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)  # pylint: disable=invalid-name
 async def _validate_service_data(hass: HomeAssistant, data: dict[str, Any]) -> None:
     has_password: bool = bool(data.get(CONF_PASSWORD))
     has_key_file: bool = bool(data.get(CONF_KEY_FILE))
+    has_passphrase: bool = data.get(CONF_PASSPHRASE) is not None
 
     if not has_password and not has_key_file:
         raise ServiceValidationError(
@@ -36,6 +46,13 @@ async def _validate_service_data(hass: HomeAssistant, data: dict[str, Any]) -> N
             "Password and key file cannot both be provided.",
             translation_domain=DOMAIN,
             translation_key="password_and_key_file",
+        )
+
+    if has_passphrase and not has_key_file:
+        raise ServiceValidationError(
+            "Passphrase can only be used when key_file is provided.",
+            translation_domain=DOMAIN,
+            translation_key="passphrase_requires_key_file",
         )
 
     has_command: bool = bool(data.get(CONF_COMMAND))
@@ -73,6 +90,7 @@ SERVICE_EXECUTE_SCHEMA = vol.Schema(
             vol.Required(CONF_USERNAME): str,
             vol.Optional(CONF_PASSWORD): str,
             vol.Optional(CONF_KEY_FILE): str,
+            vol.Optional(CONF_PASSPHRASE): str,
             vol.Optional(CONF_COMMAND): str,
             vol.Optional(CONF_INPUT): str,
             vol.Optional(CONF_CHECK_KNOWN_HOSTS, default=True): bool,
