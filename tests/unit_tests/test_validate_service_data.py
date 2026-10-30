@@ -24,6 +24,23 @@ class TestValidateServiceData(unittest.IsolatedAsyncioTestCase):
 
         self.mock_hass.async_add_executor_job = AsyncMock(side_effect=_executor_job)
 
+    async def test_invalid_port_raises(self):
+        for port in (0, 65536):
+            with self.subTest(port=port), self.assertRaises(ServiceValidationError) as ctx:
+                await _validate_service_data(
+                    self.mock_hass,
+                    {"password": "secret", "command": "ls", "port": port},
+                )
+            self.assertEqual(ctx.exception.translation_key, "invalid_port")
+
+    async def test_invalid_timeout_raises(self):
+        with self.assertRaises(ServiceValidationError) as ctx:
+            await _validate_service_data(
+                self.mock_hass,
+                {"password": "secret", "command": "ls", "timeout": 0},
+            )
+        self.assertEqual(ctx.exception.translation_key, "invalid_timeout")
+
     async def test_no_password_no_key_file_raises(self):
         with self.assertRaises(ServiceValidationError) as ctx:
             await _validate_service_data(self.mock_hass, {"command": "echo hi"})

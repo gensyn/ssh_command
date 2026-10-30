@@ -82,6 +82,12 @@
     "known_hosts_with_check_disabled": {
       "message": "Known hosts provided while check known hosts is disabled."
     },
+    "invalid_port": {
+      "message": "Port must be between 1 and 65535."
+    },
+    "invalid_timeout": {
+      "message": "Timeout must be greater than zero."
+    },
     "integration_not_set_up": {
       "message": "SSH Command integration is not set up."
     },
@@ -98,7 +104,7 @@
       "message": "Host is not reachable."
     },
     "connection_timed_out": {
-      "message": "Connection to the host timed out."
+      "message": "SSH operation timed out."
     }
   }
 }
