@@ -16,9 +16,11 @@ execute:
       default: 22
       selector:
         number:
+          min: 1
+          max: 65535
     username:
       name: Username
-      description: Username for SSH authentication (optional if using key-based authentication).
+      description: Username for SSH authentication.
       required: true
       selector:
         text:
@@ -50,7 +52,7 @@ execute:
         text:
     input:
       name: Input
-      description: Input to send to the `stdin` of the host.
+      description: Input to send to stdin. If this is a file path, the file contents are sent.
       required: false
       selector:
         text:
@@ -63,7 +65,7 @@ execute:
         boolean:
     known_hosts:
       name: Known Hosts
-      description: Path to the known hosts file or string of the known hosts.
+      description: Path to a known_hosts file or OpenSSH-format known_hosts contents.
       required: false
       selector:
         text:
@@ -74,3 +76,4 @@ execute:
       default: 30
       selector:
         number:
+          min: 1

@@ -82,6 +82,12 @@
     "known_hosts_with_check_disabled": {
       "message": "Bekannte Hosts wurden angegeben, obwohl die Überprüfung deaktiviert ist."
     },
+    "invalid_port": {
+      "message": "Der Port muss zwischen 1 und 65535 liegen."
+    },
+    "invalid_timeout": {
+      "message": "Das Timeout muss größer als null sein."
+    },
     "integration_not_set_up": {
       "message": "Die SSH-Command-Integration ist nicht eingerichtet."
     },
@@ -98,6 +104,6 @@
       "message": "Der Host ist nicht erreichbar."
     },
     "connection_timed_out": {
-      "message": "Ein Timeout ist aufgetreten."}
+      "message": "Der SSH-Vorgang hat das Zeitlimit überschritten."}
   }
 }
