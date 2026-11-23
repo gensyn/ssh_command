@@ -1,6 +1,6 @@
 """Integration tests for the SSH Command custom component.
 
-These tests use ``pytest-homeassistant-custom-component`` which spins up a
+These tests use ``pytest-homeassistant`` which spins up a
 real (in-process) Home Assistant instance per test.  No hand-rolled mocks
 are needed for the HA side: the ``hass`` fixture IS a real ``HomeAssistant``
 object, and services behave exactly as they do at runtime.
@@ -22,7 +22,7 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from asyncssh import HostKeyNotVerifiable, PermissionDenied
 
