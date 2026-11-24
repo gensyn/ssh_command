@@ -10,7 +10,7 @@ sys.path.insert(0, absolute_mock_path)
 absolute_plugin_path = str(Path(__file__).parent.parent.parent.parent.absolute())
 sys.path.insert(0, absolute_plugin_path)
 
-from asyncssh import HostKeyNotVerifiable, PermissionDenied
+from asyncssh import HostKeyNotVerifiable, PermissionDenied, SSHKnownHosts
 
 from homeassistant.exceptions import ServiceValidationError
 
@@ -144,6 +144,21 @@ class TestSshCommandCoordinator(unittest.IsolatedAsyncioTestCase):
             result = await self.coordinator._resolve_known_hosts(True, "/nonexistent/known_hosts")
 
         self.assertEqual(result, "/nonexistent/known_hosts")
+
+    async def test_resolve_known_hosts_inline_contents(self):
+        known_hosts = "example.local ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA"
+
+        result = await self.coordinator._resolve_known_hosts(True, known_hosts)
+
+        self.assertIsInstance(result, SSHKnownHosts)
+
+    async def test_resolve_known_hosts_missing_path_with_spaces(self):
+        known_hosts = "/nonexistent/my known_hosts file"
+
+        with patch("pathlib.Path.exists", return_value=False):
+            result = await self.coordinator._resolve_known_hosts(True, known_hosts)
+
+        self.assertEqual(result, known_hosts)
 
     async def test_resolve_known_hosts_default_path(self):
         with patch("pathlib.Path.exists", return_value=False):

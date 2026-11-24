@@ -20,6 +20,7 @@ from asyncssh import (
     KeyEncryptionError,
     KeyImportError,
     PermissionDenied,
+    SSHKnownHosts,
     connect,
     read_known_hosts,
     DEFAULT_PORT,
@@ -138,9 +139,9 @@ class SshCommandCoordinator:
                 translation_key="connection_refused",
             )
         except TimeoutError as exc:
-            _LOGGER.warning("SSH connection to %s timed out: %s", host, exc)
+            _LOGGER.warning("SSH operation on %s timed out: %s", host, exc)
             raise ServiceValidationError(
-                "Connection timed out.",
+                "SSH operation timed out.",
                 translation_domain=DOMAIN,
                 translation_key="connection_timed_out",
             ) from exc
@@ -160,12 +161,38 @@ class SshCommandCoordinator:
             CONF_EXIT_STATUS: result.exit_status,
         }
 
-    async def _resolve_known_hosts(self, check_known_hosts: bool, known_hosts: str | None) -> str | None:
+    async def _resolve_known_hosts(
+        self, check_known_hosts: bool, known_hosts: str | None
+    ) -> SSHKnownHosts | str | None:
         """Resolve the known_hosts value for the SSH connection."""
         if not check_known_hosts:
             return None
         if not known_hosts:
             known_hosts = str(Path("~", ".ssh", "known_hosts").expanduser())
-        if await self.hass.async_add_executor_job(Path(known_hosts).exists):
+        known_hosts_lines = [
+            line.strip().split()
+            for line in known_hosts.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+        if any(
+            len(fields) >= 3
+            and (
+                fields[1].startswith(("ssh-", "ecdsa-", "sk-"))
+                or (
+                    fields[0] in ("@cert-authority", "@revoked")
+                    and len(fields) >= 4
+                    and fields[2].startswith(("ssh-", "ecdsa-", "sk-"))
+                )
+            )
+            for fields in known_hosts_lines
+        ):
+            return SSHKnownHosts(known_hosts)
+        try:
+            known_hosts_file_exists = await self.hass.async_add_executor_job(
+                Path(known_hosts).exists
+            )
+        except OSError:
+            known_hosts_file_exists = False
+        if known_hosts_file_exists:
             return await self.hass.async_add_executor_job(read_known_hosts, known_hosts)
         return known_hosts

@@ -30,6 +30,22 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)  # pylint: disable=invalid-name
 
 
 async def _validate_service_data(hass: HomeAssistant, data: dict[str, Any]) -> None:
+    port = data.get(CONF_PORT, 22)
+    if not 1 <= port <= 65535:
+        raise ServiceValidationError(
+            "Port must be between 1 and 65535.",
+            translation_domain=DOMAIN,
+            translation_key="invalid_port",
+        )
+
+    timeout = data.get(CONF_TIMEOUT, CONST_DEFAULT_TIMEOUT)
+    if timeout <= 0:
+        raise ServiceValidationError(
+            "Timeout must be greater than zero.",
+            translation_domain=DOMAIN,
+            translation_key="invalid_timeout",
+        )
+
     has_password: bool = bool(data.get(CONF_PASSWORD))
     has_key_file: bool = bool(data.get(CONF_KEY_FILE))
     has_passphrase: bool = data.get(CONF_PASSPHRASE) is not None

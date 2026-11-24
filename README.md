@@ -23,10 +23,12 @@ This integration does not create devices or entities. It only registers the `ssh
 
 ### Manual Installation
 
-1. Download or clone this repository
-2. Copy the `ssh_command` folder to your Home Assistant `config/custom_components` directory
-3. Restart Home Assistant
-4. Add the integration via `Settings > Devices & Services > Add Integration`
+1. Clone this repository into `config/custom_components/ssh_command` (create `custom_components` if needed):
+   ```sh
+   git clone https://github.com/gensyn/ssh_command.git config/custom_components/ssh_command
+   ```
+2. Restart Home Assistant
+3. Add the integration via `Settings > Devices & Services > Add Integration`
 
 ---
 
@@ -39,7 +41,7 @@ This integration does not create devices or entities. It only registers the `ssh
 #### Parameters
 
 - `host` (required) — Hostname or IP address of the remote server
-- `port` (default: `22`) — SSH port of the remote server
+- `port` (default: `22`) — SSH port of the remote server (`1`–`65535`)
 - `username` (required) — SSH username
 - `password` — SSH password (use instead of key_file)
 - `key_file` — Path to an SSH private key file (use instead of password)
@@ -47,10 +49,10 @@ This integration does not create devices or entities. It only registers the `ssh
 - `command` — Command string to execute on the host
 - `input` — Input to send to the `stdin` of the host. If this is a file path, the content of the file will be sent.
 - `check_known_hosts` (default: `true`) — Verify host key against known hosts
-- `known_hosts` — Path or string of the known hosts (only valid when `check_known_hosts` is `true`)
-- `timeout` (default: `30`) — Timeout in seconds for the SSH command execution
+- `known_hosts` — Path to a known_hosts file or OpenSSH-format known_hosts contents (only valid when `check_known_hosts` is `true`)
+- `timeout` (default: `30`) — Positive timeout in seconds for SSH connection and command execution
 
-All parameters are optional in the raw schema except `host` and `username` — the service enforces required combinations and file existence checks described below.
+The service schema requires `host` and `username`. It also enforces the authentication, command/input, key-file, and host-verification rules below.
 
 #### Validation rules enforced by the service
 
@@ -59,13 +61,16 @@ All parameters are optional in the raw schema except `host` and `username` — t
 - Either `command` or `input` or both must be provided
 - If `key_file` is provided, the file must exist on the Home Assistant filesystem
 - `known_hosts` may not be provided when `check_known_hosts` is `false`
+- `port` must be between `1` and `65535`; `timeout` must be greater than zero
+
+`input` is sent as literal stdin text unless it names an existing file, in which case that file's contents are sent. SSH host-key verification is enabled by default; disabling it removes protection against connecting to an impersonated host and should only be used when you understand that risk.
 
 ### Return values
 
-The service returns:
+The service response contains:
 - `output` — standard output of the remote command
 - `error` — standard error of the remote command
-- `exit_status` — numeric exit status of the remote command
+- `exit_status` — numeric exit status of the remote command, or `null` if it ended without an exit status
 
 ### Example: run a simple command
 
@@ -84,19 +89,37 @@ data:
 service: ssh_command.execute
 data:
   host: example.local
+  username: myuser
   key_file: /config/ssh/id_rsa
   input: /config/scripts/deploy.sh
   timeout: 60
 ```
 
-To capture the response in automations that support service responses, use the platform's service response features (the result contains `output`, `error`, `exit_status`).
+To capture the response in an automation, use a response variable:
+
+```yaml
+action:
+  - action: ssh_command.execute
+    data:
+      host: 192.0.2.10
+      username: myuser
+      password: !secret ssh_password
+      command: uptime
+    response_variable: ssh_result
+```
+
+`ssh_result` contains `output`, `error`, and `exit_status`.
 
 ---
 
 ## ⚠️ Known issues
 
-- If you are using HassOS and enable `check_known_hosts` without explicitly providing `known_hosts`, this will probably fail with an error that the `known_hosts` file can not be found, as the file might not be accessible from within Home Assistant. Either disable host checking (not recommended), or provide `known_hosts` explicitly. See the [asyncssh Documentation](https://asyncssh.readthedocs.io/en/stable/api.html#known-hosts) for valid formats.
+- If you are using HassOS and enable `check_known_hosts` without explicitly providing `known_hosts`, this may fail if the default `~/.ssh/known_hosts` file is not available to Home Assistant. Provide a known_hosts file path or OpenSSH-format contents instead. See the [AsyncSSH documentation](https://asyncssh.readthedocs.io/en/stable/api.html#known-hosts) for valid formats.
   - Similar errors might occur in `Docker` installations.
+
+## Removal
+
+Remove **SSH Command** from `Settings > Devices & Services`. If installed manually, delete `config/custom_components/ssh_command` and restart Home Assistant. If installed through HACS, uninstall it there and restart Home Assistant.
 
 ## 🚧 Future Development
 
